@@ -4,7 +4,8 @@ mod probes;
 #[macro_use]
 mod macros;
 
-use job_scheduler::{JobScheduler, Job};
+use clap::Clap;
+use job_scheduler::{Job, JobScheduler};
 use serde_derive::Deserialize;
 use simple_logger::SimpleLogger;
 use std::error::Error;
@@ -18,10 +19,19 @@ pub struct Config {
     alerts: Option<alerts::Alerts>,
 }
 
+#[derive(Clap)]
+#[clap(version = "1.0", author = "Rollie Ma <rollie@rollie.dev>")]
+struct Opts {
+    #[clap(short, long, default_value = "otto.toml")]
+    config: String,
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     SimpleLogger::new().init()?;
 
-    let buffer: String = fs::read_to_string("./config.toml")?;
+    let opts: Opts = Opts::parse();
+
+    let buffer: String = fs::read_to_string(opts.config)?;
     let config: Config = toml::from_str(&buffer)?;
 
     let probes = probes::register_from(&config);
@@ -33,9 +43,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     for (name, plugin) in probes.iter() {
         log::info!("starting probe plugin: {}", name);
         let alerts = &alerts;
-        sched.add(Job::new(plugin.schedule(&global).parse().unwrap(), move || {
-            plugin.observe(alerts);
-        }));
+        sched.add(Job::new(
+            plugin.schedule(&global).parse().unwrap(),
+            move || {
+                plugin.observe(alerts);
+            },
+        ));
     }
 
     loop {
