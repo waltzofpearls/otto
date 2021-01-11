@@ -1,4 +1,5 @@
 use super::Alert;
+use super::Notification;
 use serde_derive::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -11,7 +12,8 @@ pub struct Gmail {
 }
 
 impl Alert for Gmail {
-    fn notify(&self) {
+    fn notify(&self, notif: &Notification) {
         println!("ALERT -> Gmail");
+        println!("{:?}", notif);
     }
 }

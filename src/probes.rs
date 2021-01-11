@@ -1,5 +1,5 @@
 use super::alerts::Alert;
-use super::plugin_from;
+use super::register_plugins;
 use super::Config;
 use serde_derive::Deserialize;
 use std::collections::HashMap;
@@ -9,32 +9,19 @@ pub mod http;
 
 #[derive(Debug, Deserialize)]
 pub struct Probes {
-    pub exec: Option<exec::Exec>,
-    pub http: Option<http::HTTP>,
+    pub exec: Option<Vec<exec::Exec>>,
+    pub http: Option<Vec<http::HTTP>>,
 }
 
-pub fn register_from(config: &Config) -> HashMap<String, Box<dyn Probe>> {
+pub fn register_from(config: &Config) -> HashMap<String, Vec<Box<dyn Probe>>> {
     let mut probes = HashMap::new();
-    let mut plugin: Box<dyn Probe>;
-    match plugin_from!(config.probes, exec) {
-        Some(plg) => {
-            plugin = Box::new(plg.clone());
-            probes.insert("exec".to_string(), plugin);
-        }
-        None => println!(""),
-    };
-    match plugin_from!(config.probes, http) {
-        Some(plg) => {
-            plugin = Box::new(plg.clone());
-            probes.insert("http".to_string(), plugin);
-        }
-        None => println!(""),
-    };
+    register_plugins!(Probe => config.probes.exec);
+    register_plugins!(Probe => config.probes.http);
     probes
 }
 
 pub trait Probe {
-    fn observe(&self, alerts: &HashMap<String, Box<dyn Alert>>);
+    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>);
     fn local_schedule(&self) -> Option<String>;
 
     fn schedule(&self, global: &str) -> String {
@@ -44,10 +31,21 @@ pub trait Probe {
         }
     }
 
-    fn notify(&self, alerts: &HashMap<String, Box<dyn Alert>>) {
-        for (name, plugin) in alerts.into_iter() {
-            log::info!("calling alert plugin: {}", name);
-            plugin.notify();
+    fn notify(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>, notif: Notification) {
+        for (name, plugins) in alerts.into_iter() {
+            log::info!("calling alert plugins: {} x {}", plugins.len(), name);
+            for plugin in plugins.iter() {
+                plugin.notify(&notif);
+            }
         }
     }
+}
+
+#[derive(Debug)]
+pub struct Notification {
+    pub from: String,
+    // command that executed or http url opened
+    pub check: String,
+    // alert message
+    pub result: String,
 }
