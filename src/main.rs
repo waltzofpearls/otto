@@ -22,7 +22,7 @@ pub struct Config {
 #[derive(Clap)]
 #[clap(version = "1.0", author = "Rollie Ma <rollie@rollie.dev>")]
 struct Opts {
-    #[clap(short, long, default_value = "otto.toml")]
+    #[clap(short, long, default_value = "/etc/otto/otto.toml")]
     config: String,
 }
 
