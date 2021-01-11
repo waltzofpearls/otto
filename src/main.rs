@@ -5,6 +5,7 @@ mod probes;
 mod macros;
 
 use clap::Clap;
+use crossbeam_channel::{bounded, select, tick, Receiver};
 use job_scheduler::{Job, JobScheduler};
 use serde_derive::Deserialize;
 use simple_logger::SimpleLogger;
@@ -24,6 +25,15 @@ pub struct Config {
 struct Opts {
     #[clap(short, long, default_value = "/etc/otto/otto.toml")]
     config: String,
+}
+
+fn ctrl_channel() -> Result<Receiver<()>, ctrlc::Error> {
+    let (sender, receiver) = bounded(100);
+    ctrlc::set_handler(move || {
+        let _ = sender.send(());
+    })?;
+
+    Ok(receiver)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -51,8 +61,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         ));
     }
 
+    let ctrl_c_events = ctrl_channel()?;
+    let ticks = tick(Duration::from_millis(500));
+
     loop {
         sched.tick();
-        std::thread::sleep(Duration::from_millis(500));
+        select! {
+            recv(ticks) -> _ => {}
+            recv(ctrl_c_events) -> _ => {
+                println!();
+                println!("SIGINT received, stopping...");
+                break;
+            }
+        }
     }
+
+    Ok(())
 }
