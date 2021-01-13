@@ -1,0 +1,13 @@
+schedule = "0/5 * * * * *"
+
+[[probes.exec]]
+cmd = "./test.sh"
+
+[[probes.http]]
+schedule = "0/10 * * * * *"
+url = "https://google.ca"
+method = "get"
+expected_code = 200
+
+[[alerts.slack]]
+webhook_url = "https://hooks.slack.com/services/abc/123/45z"
