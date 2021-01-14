@@ -1,8 +1,10 @@
 use super::alerts::Alert;
 use super::register_plugins;
 use super::Config;
+use anyhow::Result;
 use serde_derive::Deserialize;
 use std::collections::HashMap;
+use std::error::Error;
 
 pub mod exec;
 pub mod http;
@@ -21,7 +23,7 @@ pub fn register_from(config: &Config) -> HashMap<String, Vec<Box<dyn Probe>>> {
 }
 
 pub trait Probe {
-    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>);
+    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<(), Box<dyn Error>>;
     fn local_schedule(&self) -> Option<String>;
 
     fn schedule(&self, global: &str) -> String {
@@ -31,13 +33,20 @@ pub trait Probe {
         }
     }
 
-    fn notify(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>, notif: Notification) {
+    fn notify(
+        &self,
+        alerts: &HashMap<String, Vec<Box<dyn Alert>>>,
+        notif: Notification,
+    ) -> Result<(), Box<dyn Error>> {
         for (name, plugins) in alerts.into_iter() {
             log::info!("calling alert plugins: {} x {}", plugins.len(), name);
             for plugin in plugins.iter() {
-                plugin.notify(&notif);
+                plugin.notify(&notif).unwrap_or_else(|err| {
+                    log::error!("[{}] error running alert plugin: {}", name, err)
+                })
             }
         }
+        Ok(())
     }
 }
 

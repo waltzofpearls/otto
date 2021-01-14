@@ -1,8 +1,10 @@
 use super::Alert;
 use super::Notification;
 use super::Probe;
+use anyhow::{Context, Result};
 use serde_derive::Deserialize;
 use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct HTTP {
@@ -13,7 +15,7 @@ pub struct HTTP {
 }
 
 impl Probe for HTTP {
-    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) {
+    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<(), Box<dyn Error>> {
         log::info!(
             "opening url {} with {} request with expected status code {}",
             self.url,
@@ -23,18 +25,10 @@ impl Probe for HTTP {
 
         let func = match &self.method as &str {
             "get" => reqwest::blocking::get,
-            _ => {
-                log::error!("unknown request method: {}", self.method);
-                return;
-            }
+            _ => return Err(format!("unknown request method: {}", self.method))?,
         };
-        let resp = match func(&self.url) {
-            Ok(resp) => resp,
-            Err(err) => {
-                log::error!("failed to {} request {}: {}", self.method, self.url, err);
-                return;
-            }
-        };
+        let resp = func(&self.url)
+            .with_context(|| format!("failed to {} request {}", self.method, self.url))?;
         if resp.status().as_u16() != self.expected_code {
             self.notify(
                 alerts,
@@ -50,8 +44,9 @@ impl Probe for HTTP {
                         resp.status().as_u16()
                     ),
                 },
-            );
+            )?
         }
+        Ok(())
     }
 
     fn local_schedule(&self) -> Option<String> {

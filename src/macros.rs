@@ -29,8 +29,8 @@ macro_rules! register_plugins {
                 for plg in plgs.iter() {
                     plugins.push(Box::new(plg.clone()));
                 }
-                let plugin_group = stringify!("{}", $plugin).to_string();
-                $plugins.insert(plugin_group, plugins);
+                let plugin_name = stringify!($plugin).to_string();
+                $plugins.insert(plugin_name, plugins);
             }
             None => println!(""),
         };
