@@ -49,13 +49,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             sched.add(Job::new(
                 plugin.schedule(&global).parse().unwrap(),
                 move || {
-                    plugin.observe(alerts);
+                    plugin.observe(alerts).unwrap_or_else(|err| {
+                        log::error!("[{}] error running probe plugin: {}", name, err);
+                    });
                 },
             ));
         }
     }
 
-    let ctrl_c_events = ctrl_channel()?;
+    let ctrl_c_events = ctrl_c_channel()?;
     let ticks = tick(Duration::from_millis(500));
 
     loop {
@@ -73,7 +75,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn ctrl_channel() -> Result<Receiver<()>, ctrlc::Error> {
+fn ctrl_c_channel() -> Result<Receiver<()>, ctrlc::Error> {
     let (sender, receiver) = bounded(100);
     ctrlc::set_handler(move || {
         let _ = sender.send(());

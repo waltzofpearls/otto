@@ -1,8 +1,10 @@
 use super::Alert;
 use super::Notification;
 use super::Probe;
+use anyhow::{Context, Result};
 use serde_derive::Deserialize;
 use std::collections::HashMap;
+use std::error::Error;
 use std::process::Command;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -13,20 +15,14 @@ pub struct Exec {
 }
 
 impl Probe for Exec {
-    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) {
+    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<(), Box<dyn Error>> {
         log::info!("executing command {:?} with args {:?}", self.cmd, self.args);
 
         let mut cmd = Command::new(&self.cmd);
         if let Some(args) = &self.args {
             cmd.args(args);
         }
-        let output = match cmd.output() {
-            Ok(output) => output,
-            Err(err) => {
-                log::error!("failed to execute command {}", err);
-                return;
-            }
-        };
+        let output = cmd.output().with_context(|| "failed to execute command")?;
         if !output.status.success() {
             self.notify(
                 alerts,
@@ -39,8 +35,9 @@ impl Probe for Exec {
                         String::from_utf8_lossy(&output.stderr)
                     ),
                 },
-            );
+            )?
         }
+        Ok(())
     }
 
     fn local_schedule(&self) -> Option<String> {
