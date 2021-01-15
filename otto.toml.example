@@ -2,10 +2,11 @@ schedule = "0 * * * * *"
 log_level = "info"
 
 [[probes.exec]]
+schedule = "0/30 * * * * *"
 cmd = "./test.sh"
 
 [[probes.http]]
-schedule = "0/10 * * * * *"
+schedule = "0/30 * * * * *"
 url = "https://google.ca"
 method = "get"
 expected_code = 200
@@ -20,6 +21,22 @@ json = """{
     "key2": "value2"
 }"""
 expected_code = 200
+
+[[probes.atom]]
+schedule = "0 * * * * *"
+feed_url = "https://www.cloudflarestatus.com/history.atom"
+# Content should contain Investigating and not contain Resolved
+# for regex lookahead and negative look ahead see the following stack overflow answer
+# https://stackoverflow.com/questions/8240765/is-there-a-regex-to-match-a-string-that-contains-a-but-does-not-contain-b
+content_regex = "^(?=.*Investigating)(?!.*Resolved).*"
+
+[[probes.rss]]
+schedule = "0 * * * * *"
+feed_url = "https://www.githubstatus.com/history.rss"
+# Content should contain Investigating and not contain Resolved
+# for regex lookahead and negative look ahead see the following stack overflow answer
+# https://stackoverflow.com/questions/8240765/is-there-a-regex-to-match-a-string-that-contains-a-but-does-not-contain-b
+description_regex = "^(?=.*Investigating)(?!.*Resolved).*"
 
 [[alerts.slack]]
 webhook_url = "https://hooks.slack.com/services/abc/123/45z"

@@ -5,19 +5,25 @@ use anyhow::Result;
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 
+pub mod atom;
 pub mod exec;
 pub mod http;
+pub mod rss;
 
 #[derive(Debug, Deserialize)]
 pub struct Probes {
+    pub atom: Option<Vec<atom::Atom>>,
     pub exec: Option<Vec<exec::Exec>>,
     pub http: Option<Vec<http::HTTP>>,
+    pub rss: Option<Vec<rss::RSS>>,
 }
 
 pub fn register_from(config: &Config) -> HashMap<String, Vec<Box<dyn Probe>>> {
     let mut probes = HashMap::new();
+    register_plugins!(Probe => config.probes.atom);
     register_plugins!(Probe => config.probes.exec);
     register_plugins!(Probe => config.probes.http);
+    register_plugins!(Probe => config.probes.rss);
     probes
 }
 
@@ -38,7 +44,12 @@ pub trait Probe {
         notif: Notification,
     ) -> Result<()> {
         for (name, plugins) in alerts.into_iter() {
-            log::info!("calling alert plugins: {} x {}", plugins.len(), name);
+            log::info!(
+                "[{}] calling alert plugins: {} x {}",
+                notif.from,
+                plugins.len(),
+                name
+            );
             for plugin in plugins.iter() {
                 plugin.notify(&notif).unwrap_or_else(|err| {
                     log::error!("[alert][{}] error running plugin: {}", name, err)
@@ -55,5 +66,6 @@ pub struct Notification {
     // command that executed or http url opened
     pub check: String,
     // alert message
-    pub result: String,
+    pub message: String,
+    pub message_html: Option<String>,
 }

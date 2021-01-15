@@ -40,6 +40,12 @@ impl Probe for HTTP {
             .send()
             .with_context(|| format!("failed to {} request {}", self.method, self.url))?;
         if resp.status().as_u16() != self.expected_code {
+            log::info!(
+                "_TRIGGERED_: failed [{}] requesting url {} with expected code {}",
+                self.method,
+                self.url,
+                self.expected_code,
+            );
             self.notify(
                 alerts,
                 Notification {
@@ -48,11 +54,12 @@ impl Probe for HTTP {
                         "http {} request to url {} with expected status code {}",
                         self.method, self.url, self.expected_code
                     ),
-                    result: format!(
+                    message: format!(
                         "expected status code is {} and actual code is {}",
                         self.expected_code,
                         resp.status().as_u16()
                     ),
+                    message_html: None,
                 },
             )?
         }
