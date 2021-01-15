@@ -4,7 +4,6 @@ use super::Probe;
 use anyhow::{Context, Result};
 use serde_derive::Deserialize;
 use std::collections::HashMap;
-use std::error::Error;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct HTTP {
@@ -15,7 +14,7 @@ pub struct HTTP {
 }
 
 impl Probe for HTTP {
-    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<(), Box<dyn Error>> {
+    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()> {
         log::info!(
             "opening url {} with {} request with expected status code {}",
             self.url,
@@ -25,7 +24,7 @@ impl Probe for HTTP {
 
         let func = match &self.method as &str {
             "get" => reqwest::blocking::get,
-            _ => return Err(format!("unknown request method: {}", self.method))?,
+            _ => anyhow::bail!("unknown request method: {}", self.method),
         };
         let resp = func(&self.url)
             .with_context(|| format!("failed to {} request {}", self.method, self.url))?;
