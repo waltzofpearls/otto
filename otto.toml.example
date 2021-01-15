@@ -1,4 +1,5 @@
-schedule = "0/5 * * * * *"
+schedule = "0 * * * * *"
+log_level = "info"
 
 [[probes.exec]]
 cmd = "./test.sh"
@@ -9,5 +10,23 @@ url = "https://google.ca"
 method = "get"
 expected_code = 200
 
+[[probes.http]]
+schedule = "0/50 * * * * *"
+url = "https://httpbin.org/post"
+method = "post"
+headers = { Content-Type = "application/json" }
+json = """{
+    "key1": "value1",
+    "key2": "value2"
+}"""
+expected_code = 200
+
 [[alerts.slack]]
 webhook_url = "https://hooks.slack.com/services/abc/123/45z"
+
+[[alerts.email]]
+smtp_relay = "smtp.gmail.com"
+smtp_username = "some.username@gmail.com"
+smtp_password = "some.app.password"
+from = "Otto <otto@ottobot.io>"
+to = "Joe Smith <joe@smith.com>"
