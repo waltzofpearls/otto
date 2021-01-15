@@ -10,23 +10,34 @@ pub struct HTTP {
     schedule: Option<String>,
     url: String,
     method: String,
+    headers: Option<HashMap<String, String>>,
+    json: Option<String>,
     expected_code: u16,
 }
 
 impl Probe for HTTP {
     fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()> {
         log::info!(
-            "opening url {} with {} request with expected status code {}",
-            self.url,
+            "sending [{}] request to {} with expected status code {}",
             self.method,
+            self.url,
             self.expected_code
         );
 
-        let func = match &self.method as &str {
-            "get" => reqwest::blocking::get,
+        let client = reqwest::blocking::Client::new();
+        let mut req = match &self.method as &str {
+            "get" => client.get(&self.url),
+            "post" => client.post(&self.url),
             _ => anyhow::bail!("unknown request method: {}", self.method),
         };
-        let resp = func(&self.url)
+        for (header, value) in self.headers.as_ref().unwrap_or(&HashMap::new()).iter() {
+            req = req.header(header, value);
+        }
+        if let Some(json) = self.json.to_owned() {
+            req = req.json(&json)
+        }
+        let resp = req
+            .send()
             .with_context(|| format!("failed to {} request {}", self.method, self.url))?;
         if resp.status().as_u16() != self.expected_code {
             self.notify(

@@ -49,7 +49,7 @@ fn main() -> Result<()> {
                 plugin.schedule(&global).parse().unwrap(),
                 move || {
                     plugin.observe(alerts).unwrap_or_else(|err| {
-                        log::error!("[{}] error running probe plugin: {}", name, err);
+                        log::error!("[probe][{}] error running plugin: {}", name, err);
                     });
                 },
             ));

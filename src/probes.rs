@@ -41,7 +41,7 @@ pub trait Probe {
             log::info!("calling alert plugins: {} x {}", plugins.len(), name);
             for plugin in plugins.iter() {
                 plugin.notify(&notif).unwrap_or_else(|err| {
-                    log::error!("[{}] error running alert plugin: {}", name, err)
+                    log::error!("[alert][{}] error running plugin: {}", name, err)
                 })
             }
         }
