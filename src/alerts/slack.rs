@@ -3,7 +3,6 @@ use super::Notification;
 use anyhow::Result;
 use serde_derive::Deserialize;
 use slack_hook::{PayloadBuilder, Slack as SlackHook};
-use std::error::Error;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Slack {
@@ -11,7 +10,7 @@ pub struct Slack {
 }
 
 impl Alert for Slack {
-    fn notify(&self, notif: &Notification) -> Result<(), Box<dyn Error>> {
+    fn notify(&self, notif: &Notification) -> Result<()> {
         log::info!("sending slack alert to webhook url {}", self.webhook_url);
         log::debug!("NOTIFICATION: {:?}", notif);
 
@@ -19,10 +18,7 @@ impl Alert for Slack {
         let slack = match SlackHook::new(url) {
             Ok(slack) => slack,
             Err(err) => {
-                return Err(format!(
-                    "failed to create slack webhook with url {}: {}",
-                    url, err
-                ))?
+                anyhow::bail!("failed to create slack webhook with url {}: {}", url, err)
             }
         };
         let payload = match PayloadBuilder::new()
@@ -35,15 +31,16 @@ impl Alert for Slack {
             .build()
         {
             Ok(payload) => payload,
-            Err(err) => return Err(format!("failed to build slack webhook payload: {}", err))?,
+            Err(err) => anyhow::bail!("failed to build slack webhook payload: {}", err),
         };
 
         match slack.send(&payload) {
             Ok(_) => Ok(()),
-            Err(err) => Err(format!(
+            Err(err) => anyhow::bail!(
                 "failed to post message to slack webhook url {}: {}",
-                self.webhook_url, err
-            ))?,
+                self.webhook_url,
+                err
+            ),
         }
     }
 }

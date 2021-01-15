@@ -5,7 +5,6 @@ use lettre::message::Mailbox;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
 use serde_derive::Deserialize;
-use std::error::Error;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Email {
@@ -17,7 +16,7 @@ pub struct Email {
 }
 
 impl Alert for Email {
-    fn notify(&self, notif: &Notification) -> Result<(), Box<dyn Error>> {
+    fn notify(&self, notif: &Notification) -> Result<()> {
         log::info!(
             "sending email alert to {} via smtp relay {}",
             self.to,
@@ -47,7 +46,7 @@ impl Alert for Email {
 
         match mailer.send(&email) {
             Ok(_) => Ok(()),
-            Err(err) => Err(format!("failed to send email to {}: {}", self.to, err))?,
+            Err(err) => anyhow::bail!("failed to send email to {}: {}", self.to, err),
         }
     }
 }

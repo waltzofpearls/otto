@@ -4,7 +4,6 @@ use super::Config;
 use anyhow::Result;
 use serde_derive::Deserialize;
 use std::collections::HashMap;
-use std::error::Error;
 
 pub mod email;
 pub mod slack;
@@ -23,5 +22,5 @@ pub fn register_from(config: &Config) -> HashMap<String, Vec<Box<dyn Alert>>> {
 }
 
 pub trait Alert {
-    fn notify(&self, notif: &Notification) -> Result<(), Box<dyn Error>>;
+    fn notify(&self, notif: &Notification) -> Result<()>;
 }

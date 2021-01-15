@@ -12,7 +12,6 @@ use crossbeam_channel::{bounded, select, tick, Receiver};
 use job_scheduler::{Job, JobScheduler};
 use log::LevelFilter;
 use simple_logger::SimpleLogger;
-use std::error::Error;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -23,7 +22,7 @@ struct Opts {
     config: String,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     let opts: Opts = Opts::parse();
 
     let config_file: &str = &opts.config;

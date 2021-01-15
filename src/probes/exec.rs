@@ -4,7 +4,6 @@ use super::Probe;
 use anyhow::{Context, Result};
 use serde_derive::Deserialize;
 use std::collections::HashMap;
-use std::error::Error;
 use std::process::Command;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -15,7 +14,7 @@ pub struct Exec {
 }
 
 impl Probe for Exec {
-    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<(), Box<dyn Error>> {
+    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()> {
         log::info!("executing command {:?} with args {:?}", self.cmd, self.args);
 
         let mut cmd = Command::new(&self.cmd);
