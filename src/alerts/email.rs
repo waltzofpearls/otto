@@ -1,7 +1,7 @@
 use super::Alert;
 use super::Notification;
 use anyhow::{Context, Result};
-use lettre::message::Mailbox;
+use lettre::message::{header, Mailbox, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
 use serde_derive::Deserialize;
@@ -30,13 +30,32 @@ impl Alert for Email {
         let to: Mailbox = (&self.to)
             .parse()
             .with_context(|| format!("failed parising email to address {}", self.to))?;
-        let email = Message::builder()
+        let message_builder = Message::builder()
             .from(from.clone())
             .reply_to(from)
             .to(to)
-            .subject(format!("Alert received from [{}] plugin", notif.from))
-            .body(format!("{}\n{}", notif.check, notif.message))
-            .with_context(|| "failed building email message")?;
+            .subject(format!("Alert received from [{}] plugin", notif.from));
+        let email = match notif.message_html.to_owned() {
+            Some(message_html) => message_builder.multipart(
+                MultiPart::alternative()
+                    .singlepart(
+                        SinglePart::builder()
+                            .header(header::ContentType(
+                                "text/plain; charset=utf8".parse().unwrap(),
+                            ))
+                            .body(format!("{}\n{}", notif.check, notif.message)),
+                    )
+                    .singlepart(
+                        SinglePart::builder()
+                            .header(header::ContentType(
+                                "text/html; charset=utf8".parse().unwrap(),
+                            ))
+                            .body(format!("<p>{}</p>{}", notif.check, message_html)),
+                    ),
+            ),
+            None => message_builder.body(format!("{}\n{}", notif.check, notif.message)),
+        }
+        .with_context(|| "failed building email message")?;
 
         let creds = Credentials::new(self.smtp_username.to_owned(), self.smtp_password.to_owned());
         let mailer = SmtpTransport::relay(&self.smtp_relay)
