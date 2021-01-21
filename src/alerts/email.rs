@@ -34,8 +34,8 @@ impl Alert for Email {
             .from(from.clone())
             .reply_to(from)
             .to(to)
-            .subject("Alert received from [email] plugin")
-            .body(format!("{}\n{}", notif.check, notif.result))
+            .subject(format!("Alert received from [{}] plugin", notif.from))
+            .body(format!("{}\n{}", notif.check, notif.message))
             .with_context(|| "failed building email message")?;
 
         let creds = Credentials::new(self.smtp_username.to_owned(), self.smtp_password.to_owned());

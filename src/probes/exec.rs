@@ -23,16 +23,22 @@ impl Probe for Exec {
         }
         let output = cmd.output().with_context(|| "failed to execute command")?;
         if !output.status.success() {
+            log::info!(
+                "_TRIGGERED_: failed executing command {} with args {:?}",
+                self.cmd,
+                self.args,
+            );
             self.notify(
                 alerts,
                 Notification {
                     from: "exec".to_owned(),
                     check: format!("command `{}` with args `{:?}`", self.cmd, self.args),
-                    result: format!(
+                    message: format!(
                         "{}: {}",
                         output.status,
                         String::from_utf8_lossy(&output.stderr)
                     ),
+                    message_html: None,
                 },
             )?
         }
