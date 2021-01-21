@@ -23,8 +23,10 @@ impl Alert for Slack {
         };
         let payload = match PayloadBuilder::new()
             .text(format!(
-                "Alert received from [*{}*] plugin:\n> {}\n```{}```",
-                notif.from, notif.check, notif.message
+                "--------------------\n*Alert from `{}` plugin:*\n--------------------\n{}\n> {}",
+                notif.from,
+                notif.check,
+                notif.message.replace("**", "*")
             ))
             .username("Otto")
             .icon_emoji(":robot_face:")
