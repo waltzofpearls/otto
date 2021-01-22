@@ -24,7 +24,7 @@ impl Probe for Atom {
 
         if let Some(latest) = feed.entries.first() {
             let title = &latest.title;
-            let link = if latest.links.len() > 0 {
+            let link = if !latest.links.is_empty() {
                 latest.links[0].href()
             } else {
                 ""

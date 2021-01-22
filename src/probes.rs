@@ -43,7 +43,7 @@ pub trait Probe {
         alerts: &HashMap<String, Vec<Box<dyn Alert>>>,
         notif: Notification,
     ) -> Result<()> {
-        for (name, plugins) in alerts.into_iter() {
+        for (name, plugins) in alerts.iter() {
             log::info!(
                 "[{}] calling alert plugins: {} x {}",
                 notif.from,
