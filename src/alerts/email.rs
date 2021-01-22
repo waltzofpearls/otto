@@ -34,7 +34,7 @@ impl Alert for Email {
             .from(from.clone())
             .reply_to(from)
             .to(to)
-            .subject(format!("Alert received from [{}] plugin", notif.from));
+            .subject(format!("Alert from [{}] plugin", notif.from));
         let email = match notif.message_html.to_owned() {
             Some(message_html) => message_builder.multipart(
                 MultiPart::alternative()
