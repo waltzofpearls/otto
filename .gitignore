@@ -10,3 +10,4 @@ Cargo.lock
 **/*.rs.bk
 
 otto.toml
+!examples/otto.toml
