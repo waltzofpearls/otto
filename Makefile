@@ -7,7 +7,7 @@ run:
 	cargo run -- --config $(APP_NAME).toml
 
 lint:
-	cargo clippy --all-targets -- -D warnings
+	cargo clippy --workspace --tests --all-features -- -D warnings
 
 docker:
 	docker build -t otto .
