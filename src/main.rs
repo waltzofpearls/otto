@@ -37,6 +37,8 @@ fn main() -> Result<()> {
 
     let probes = probes::register_from(&config);
     let alerts = alerts::register_from(&config);
+    // create metrics registry from probes and alerts
+    // and then pass the registry to probe.observe, and then from probes to alerts
 
     let mut sched = JobScheduler::new();
     let global = config.schedule;

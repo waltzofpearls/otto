@@ -7,7 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# serde_json = "1.0.61"
 anyhow = "1.0.38"
 atom_syndication = "0.9.1"
 clap = "3.0.0-beta.2"
@@ -17,11 +16,12 @@ fancy-regex = "0.4.1"
 html2md = "0.2.10"
 job_scheduler = "1.2.1"
 lettre = "0.10.0-alpha.4"
-log = "0.4.11"
+log = "0.4.14"
 reqwest = { version = "0.11.0", features = ["blocking", "json"] }
 rss = "1.10.0"
-serde = "1.0.118"
-serde_derive = "1.0.118"
+serde = "1.0.123"
+serde_derive = "1.0.123"
 simple_logger = "1.11.0"
 slack-hook = "0.8.0"
 toml = "0.5.8"
+wildmatch = "1.0.13"

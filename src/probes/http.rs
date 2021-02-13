@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct HTTP {
+    name: Option<String>,
     schedule: Option<String>,
     url: String,
     method: String,
@@ -40,7 +41,7 @@ impl Probe for HTTP {
             .send()
             .with_context(|| format!("failed to {} request {}", self.method, self.url))?;
         if resp.status().as_u16() != self.expected_code {
-            log::info!(
+            log::warn!(
                 "_TRIGGERED_: failed [{}] requesting url {} with expected code {}",
                 self.method,
                 self.url,
@@ -50,9 +51,17 @@ impl Probe for HTTP {
                 alerts,
                 Notification {
                     from: "http".to_owned(),
+                    name: self.name("http", self.name.to_owned()),
                     check: format!(
                         "http {} request to url {} with expected status code {}",
                         self.method, self.url, self.expected_code
+                    ),
+                    title: format!(
+                        "{} {} got {} want {}",
+                        self.method,
+                        self.url,
+                        resp.status().as_u16(),
+                        self.expected_code
                     ),
                     message: format!(
                         "expected status code is {} and actual code is {}",

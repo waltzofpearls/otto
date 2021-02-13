@@ -8,10 +8,9 @@
 [mit-badge]: https://img.shields.io/badge/license-Apache%202-blue.svg
 [mit-url]: https://github.com/waltzofpearls/otto/blob/main/LICENSE
 
-It's not just another monitoring tool that collects results and then alert on failures.
-Otto was initially designed to solve a specific problem, when outage happens, effortlessly
-answer the question of "is our API down, or is AWS down?", and of cource AWS here is
-interchangeable with other service providers.
+Yet another monitoring tool that collects results and then alert on failures except... this one
+was specifically designed to watch external service providers. It helps answer the question of
+"is our API down, or is AWS/Cloudfare/Heroku down?", when outages occurred.
 
 Otto is good at:
 
@@ -45,7 +44,7 @@ And **Alert** plugins:
 - [WIP] Webhook
 - [WIP] Prometheus metrics
 
-Plugins are configurable through a TOML config file:
+Plugins are configurable:
 
 ```toml
 schedule = "0 * * * * *"

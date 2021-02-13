@@ -8,15 +8,25 @@ use serde_derive::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Email {
-    pub smtp_relay: String,
-    pub smtp_username: String,
-    pub smtp_password: String,
-    pub from: String,
-    pub to: String,
+    namepass: Option<Vec<String>>,
+    smtp_relay: String,
+    smtp_username: String,
+    smtp_password: String,
+    from: String,
+    to: String,
 }
 
 impl Alert for Email {
+    fn namepass(&self) -> Option<Vec<String>> {
+        self.namepass.clone()
+    }
+
     fn notify(&self, notif: &Notification) -> Result<()> {
+        if !self.should_fire(&notif.name) {
+            log::info!("should not fire email alert for {}", &notif.name);
+            return Ok(());
+        }
+
         log::info!(
             "sending email alert to {} via smtp relay {}",
             self.to,
@@ -34,7 +44,7 @@ impl Alert for Email {
             .from(from.clone())
             .reply_to(from)
             .to(to)
-            .subject(format!("Alert from [{}] plugin", notif.from));
+            .subject(format!("TRIGGERED [{}]: {}", notif.from, notif.title));
         let email = match notif.message_html.to_owned() {
             Some(message_html) => message_builder.multipart(
                 MultiPart::alternative()

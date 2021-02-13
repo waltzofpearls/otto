@@ -9,10 +9,11 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Atom {
-    pub schedule: Option<String>,
-    pub feed_url: String,
-    pub title_regex: Option<String>,
-    pub content_regex: Option<String>,
+    name: Option<String>,
+    schedule: Option<String>,
+    feed_url: String,
+    title_regex: Option<String>,
+    content_regex: Option<String>,
 }
 
 impl Probe for Atom {
@@ -51,7 +52,7 @@ impl Probe for Atom {
                     .with_context(|| format!("failed checking regex match {}", content_regex))?;
             }
             if found_incident {
-                log::info!(
+                log::warn!(
                     "_TRIGGERED_: found incident from Atom feed {}",
                     self.feed_url
                 );
@@ -59,7 +60,9 @@ impl Probe for Atom {
                     alerts,
                     Notification {
                         from: "atom".to_owned(),
+                        name: self.name("atom", self.name.to_owned()),
                         check: format!("Latest incident from Atom feed {}", self.feed_url),
+                        title: format!("{} from {}", title, self.feed_url),
                         message: format!("{}\n{}\n{}", title, link, html2md::parse_html(&message)),
                         message_html: Some(format!("{}<br>{}<br>{}", title, link, &message)),
                     },
