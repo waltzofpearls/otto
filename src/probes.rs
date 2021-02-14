@@ -38,6 +38,17 @@ pub trait Probe {
         }
     }
 
+    fn name(&self, from: &str, name: Option<String>) -> String {
+        format!(
+            "{}.{}",
+            from,
+            match name {
+                Some(name) => name,
+                None => "".to_owned(),
+            }
+        )
+    }
+
     fn notify(
         &self,
         alerts: &HashMap<String, Vec<Box<dyn Alert>>>,
@@ -63,8 +74,10 @@ pub trait Probe {
 #[derive(Debug)]
 pub struct Notification {
     pub from: String,
+    pub name: String,
     // command that executed or http url opened
     pub check: String,
+    pub title: String,
     // alert message
     pub message: String,
     pub message_html: Option<String>,

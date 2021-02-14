@@ -6,11 +6,21 @@ use slack_hook::{PayloadBuilder, Slack as SlackHook};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Slack {
-    pub webhook_url: String,
+    namepass: Option<Vec<String>>,
+    webhook_url: String,
 }
 
 impl Alert for Slack {
+    fn namepass(&self) -> Option<Vec<String>> {
+        self.namepass.clone()
+    }
+
     fn notify(&self, notif: &Notification) -> Result<()> {
+        if !self.should_fire(&notif.name) {
+            log::info!("should not fire slack alert for {}", &notif.name);
+            return Ok(());
+        }
+
         log::info!("sending slack alert to webhook url {}", self.webhook_url);
         log::debug!("NOTIFICATION: {:?}", notif);
 
@@ -23,8 +33,9 @@ impl Alert for Slack {
         };
         let payload = match PayloadBuilder::new()
             .text(format!(
-                "--------------------\n*Alert from `{}` plugin:*\n--------------------\n{}\n> {}",
+                "--------------------\n*TRIGGERED `{}`:* {}\n--------------------\n{}\n{}",
                 notif.from,
+                notif.title,
                 notif.check,
                 notif.message.replace("**", "*")
             ))

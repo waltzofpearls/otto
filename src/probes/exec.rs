@@ -8,9 +8,11 @@ use std::process::Command;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Exec {
-    pub schedule: Option<String>,
-    pub cmd: String,
-    pub args: Option<Vec<String>>,
+    name: Option<String>,
+    schedule: Option<String>,
+    tags: Option<HashMap<String, String>>,
+    cmd: String,
+    args: Option<Vec<String>>,
 }
 
 impl Probe for Exec {
@@ -23,7 +25,7 @@ impl Probe for Exec {
         }
         let output = cmd.output().with_context(|| "failed to execute command")?;
         if !output.status.success() {
-            log::info!(
+            log::warn!(
                 "_TRIGGERED_: failed executing command {} with args {:?}",
                 self.cmd,
                 self.args,
@@ -32,7 +34,12 @@ impl Probe for Exec {
                 alerts,
                 Notification {
                     from: "exec".to_owned(),
+                    name: self.name("exec", self.name.to_owned()),
                     check: format!("command `{}` with args `{:?}`", self.cmd, self.args),
+                    title: format!(
+                        "`{}` `{:?}` got code {}",
+                        self.cmd, self.args, output.status
+                    ),
                     message: format!(
                         "{}: {}",
                         output.status,

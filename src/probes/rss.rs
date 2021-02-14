@@ -9,10 +9,11 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct RSS {
-    pub schedule: Option<String>,
-    pub feed_url: String,
-    pub title_regex: Option<String>,
-    pub description_regex: Option<String>,
+    name: Option<String>,
+    schedule: Option<String>,
+    feed_url: String,
+    title_regex: Option<String>,
+    description_regex: Option<String>,
 }
 
 impl Probe for RSS {
@@ -55,7 +56,7 @@ impl Probe for RSS {
                 })?;
             }
             if found_incident {
-                log::info!(
+                log::warn!(
                     "_TRIGGERED_: found incident from RSS feed {}",
                     self.feed_url
                 );
@@ -63,7 +64,9 @@ impl Probe for RSS {
                     alerts,
                     Notification {
                         from: "rss".to_owned(),
+                        name: self.name("rss", self.name.to_owned()),
                         check: format!("Latest incident from RSS feed {}", self.feed_url),
+                        title: format!("{} from {}", title, self.feed_url),
                         message: format!("{}\n{}\n{}", title, link, html2md::parse_html(&message)),
                         message_html: Some(format!("{}<br>{}<br>{}", title, link, &message)),
                     },
