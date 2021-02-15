@@ -9,7 +9,7 @@ use wildmatch::WildMatch;
 pub mod email;
 pub mod slack;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Alerts {
     pub slack: Option<Vec<slack::Slack>>,
     pub email: Option<Vec<email::Email>>,
@@ -22,9 +22,9 @@ pub fn register_from(config: &Config) -> HashMap<String, Vec<Box<dyn Alert>>> {
     alerts
 }
 
-pub trait Alert {
-    fn notify(&self, notif: &Notification) -> Result<()>;
+pub trait Alert: Send + Sync {
     fn namepass(&self) -> Option<Vec<String>>;
+    fn notify(&self, notif: &Notification) -> Result<()>;
 
     fn should_fire(&self, got: &str) -> bool {
         match self.namepass() {

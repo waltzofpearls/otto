@@ -15,13 +15,13 @@ was specifically designed to watch external service providers. It helps answer t
 Otto is good at:
 
 - Watch status page
- - Read and parse Atom or RSS feed
- - [AWS][aws-status], [Cloudflare][cloudflare-status], [GitHub][github-status],
-   [Heroku][heroku-status] and many more
+  - Read and parse Atom or RSS feed
+  - [AWS][aws-status], [Cloudflare][cloudflare-status], [GitHub][github-status],
+  [Heroku][heroku-status] and many more
 - Test URL liveness
- - Check response code from an API or a web page
+  - Check response code from an API or a web page
 - Periodic execution
- - Execute shell script on schedule and evaluate exit code
+  - Execute shell script on schedule and evaluate exit code
 
 [aws-status]: https://status.aws.amazon.com/
 [cloudflare-status]: https://www.cloudflarestatus.com/
@@ -37,18 +37,23 @@ Otto is equipped with **Probe** plugins:
 - HTTP
 - Exec (shell scripts)
 
-And **Alert** plugins:
+**Alert** plugins:
 
 - Slack
 - Email (SMTP)
 - [WIP] Webhook
-- [WIP] Prometheus metrics
+
+And `/metrics` endpoint for promethues.
 
 Plugins are configurable:
 
 ```toml
 schedule = "0 * * * * *"
 log_level = "info"
+
+[prometheus]
+listen = "127.0.0.1:9999"
+path = "/metrics"
 
 [[probes.exec]]
 schedule = "0/30 * * * * *"

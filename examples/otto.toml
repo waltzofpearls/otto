@@ -1,6 +1,10 @@
 schedule = "0 * * * * *"
 log_level = "info"
 
+[prometheus]
+listen = "127.0.0.1:9999"
+path = "/metrics"
+
 [[probes.exec]]
 schedule = "0/30 * * * * *"
 cmd = "./test.sh"

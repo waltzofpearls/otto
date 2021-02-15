@@ -2,15 +2,18 @@ use super::alerts::Alert;
 use super::register_plugins;
 use super::Config;
 use anyhow::Result;
+use async_trait::async_trait;
+use chrono::Utc;
+use cron::Schedule;
 use serde_derive::Deserialize;
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 pub mod atom;
 pub mod exec;
 pub mod http;
 pub mod rss;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Probes {
     pub atom: Option<Vec<atom::Atom>>,
     pub exec: Option<Vec<exec::Exec>>,
@@ -27,9 +30,46 @@ pub fn register_from(config: &Config) -> HashMap<String, Vec<Box<dyn Probe>>> {
     probes
 }
 
-pub trait Probe {
-    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()>;
+pub fn start(
+    config: &Config,
+    probes: HashMap<String, Vec<Box<dyn Probe>>>,
+    alerts: HashMap<String, Vec<Box<dyn Alert>>>,
+) -> Result<()> {
+    // to be shared by concurrent tokio tasks
+    let alerts = Arc::new(alerts);
+    let global = config.schedule.clone();
+
+    for (name, plugins) in probes.into_iter() {
+        log::info!("starting plugins: {} x {}", plugins.len(), name);
+        for plugin in plugins.into_iter() {
+            let schedule = Schedule::from_str(&plugin.schedule(&global))?;
+            let name = name.clone();
+            let cloned_alerts = Arc::clone(&alerts);
+            tokio::spawn(async move {
+                let local_alerts = cloned_alerts;
+                for datetime in schedule.upcoming(Utc) {
+                    let now = Utc::now();
+                    if let Ok(duration) = datetime.signed_duration_since(now).to_std() {
+                        tokio::time::sleep(duration).await;
+                        plugin
+                            .observe(local_alerts.as_ref())
+                            .await
+                            .unwrap_or_else(|err| {
+                                log::error!("[probe][{}] error running plugin: {}", name, err);
+                            });
+                    }
+                }
+            });
+        }
+    }
+
+    Ok(())
+}
+
+#[async_trait]
+pub trait Probe: Send + Sync {
     fn local_schedule(&self) -> Option<String>;
+    async fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()>;
 
     fn schedule(&self, global: &str) -> String {
         match self.local_schedule() {

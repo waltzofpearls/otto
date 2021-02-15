@@ -1,5 +1,6 @@
 mod alerts;
 mod config;
+mod metrics;
 mod probes;
 
 #[macro_use]
@@ -9,11 +10,9 @@ use anyhow::{Context, Result};
 use clap::Clap;
 use config::Config;
 use crossbeam_channel::{bounded, select, tick, Receiver};
-use job_scheduler::{Job, JobScheduler};
 use log::LevelFilter;
 use simple_logger::SimpleLogger;
-use std::str::FromStr;
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 #[derive(Clap)]
 #[clap(version = "1.0", author = "Rollie Ma <rollie@rollie.dev>")]
@@ -22,7 +21,8 @@ struct Opts {
     config: String,
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let opts: Opts = Opts::parse();
 
     let config_file: &str = &opts.config;
@@ -35,34 +35,17 @@ fn main() -> Result<()> {
         .with_level(LevelFilter::from_str(&config.log_level)?)
         .init()?;
 
+    metrics::listen_and_serve(&config)?;
+
     let probes = probes::register_from(&config);
     let alerts = alerts::register_from(&config);
-    // create metrics registry from probes and alerts
-    // and then pass the registry to probe.observe, and then from probes to alerts
 
-    let mut sched = JobScheduler::new();
-    let global = config.schedule;
-
-    for (name, plugins) in probes.iter() {
-        log::info!("starting probe plugins: {} x {}", plugins.len(), name);
-        let alerts = &alerts;
-        for plugin in plugins.iter() {
-            sched.add(Job::new(
-                plugin.schedule(&global).parse().unwrap(),
-                move || {
-                    plugin.observe(alerts).unwrap_or_else(|err| {
-                        log::error!("[probe][{}] error running plugin: {}", name, err);
-                    });
-                },
-            ));
-        }
-    }
+    probes::start(&config, probes, alerts)?;
 
     let ctrl_c_events = ctrl_c_channel()?;
     let ticks = tick(Duration::from_millis(500));
 
     loop {
-        sched.tick();
         select! {
             recv(ticks) -> _ => {}
             recv(ctrl_c_events) -> _ => {

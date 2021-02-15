@@ -1,6 +1,8 @@
 use super::Alert;
 use super::Notification;
 use anyhow::Result;
+use lazy_static::lazy_static;
+use prometheus::{register_counter_vec, CounterVec};
 use serde_derive::Deserialize;
 use slack_hook::{PayloadBuilder, Slack as SlackHook};
 
@@ -8,6 +10,15 @@ use slack_hook::{PayloadBuilder, Slack as SlackHook};
 pub struct Slack {
     namepass: Option<Vec<String>>,
     webhook_url: String,
+}
+
+lazy_static! {
+    static ref RUNS_TOTAL: CounterVec = register_counter_vec!(
+        "alert_slack_runs_total",
+        "run counter for slack alert plugin",
+        &["plugin", "webhook_url"]
+    )
+    .unwrap();
 }
 
 impl Alert for Slack {
@@ -20,6 +31,9 @@ impl Alert for Slack {
             log::info!("should not fire slack alert for {}", &notif.name);
             return Ok(());
         }
+        RUNS_TOTAL
+            .with_label_values(&["alert.slack", "https://hooks.slack.com/services/[redacted]"])
+            .inc();
 
         log::info!("sending slack alert to webhook url {}", self.webhook_url);
         log::debug!("NOTIFICATION: {:?}", notif);
