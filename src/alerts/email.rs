@@ -1,9 +1,11 @@
 use super::Alert;
 use super::Notification;
 use anyhow::{Context, Result};
+use lazy_static::lazy_static;
 use lettre::message::{header, Mailbox, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
+use prometheus::{register_counter_vec, CounterVec};
 use serde_derive::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -16,6 +18,15 @@ pub struct Email {
     to: String,
 }
 
+lazy_static! {
+    static ref RUNS_TOTAL: CounterVec = register_counter_vec!(
+        "alert_email_runs_total",
+        "run counter for email alert plugin",
+        &["plugin", "smtp_relay", "from", "to"]
+    )
+    .unwrap();
+}
+
 impl Alert for Email {
     fn namepass(&self) -> Option<Vec<String>> {
         self.namepass.clone()
@@ -26,6 +37,9 @@ impl Alert for Email {
             log::info!("should not fire email alert for {}", &notif.name);
             return Ok(());
         }
+        RUNS_TOTAL
+            .with_label_values(&["alert.email", &self.smtp_relay, &self.from, &self.to])
+            .inc();
 
         log::info!(
             "sending email alert to {} via smtp relay {}",

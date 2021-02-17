@@ -5,10 +5,7 @@ macro_rules! plugin_from {
             Some(cfg) => match cfg.$plugin.as_ref() {
                 Some(plg) => Some(plg),
                 None => {
-                    log::info!(
-                        "plugin {} is not defined in config file",
-                        stringify!($plugin)
-                    );
+                    log::info!("no {} plugin defined in config file", stringify!($plugin));
                     None
                 }
             },

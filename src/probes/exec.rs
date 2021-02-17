@@ -2,6 +2,9 @@ use super::Alert;
 use super::Notification;
 use super::Probe;
 use anyhow::{Context, Result};
+use async_trait::async_trait;
+use lazy_static::lazy_static;
+use prometheus::{register_counter_vec, CounterVec};
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 use std::process::Command;
@@ -10,14 +13,36 @@ use std::process::Command;
 pub struct Exec {
     name: Option<String>,
     schedule: Option<String>,
-    tags: Option<HashMap<String, String>>,
     cmd: String,
     args: Option<Vec<String>>,
 }
 
+lazy_static! {
+    static ref RUNS_TOTAL: CounterVec = register_counter_vec!(
+        "probe_exec_runs_total",
+        "run counter for exec probe plugin",
+        &["plugin", "cmd"]
+    )
+    .unwrap();
+    static ref TRIGGERED_TOTAL: CounterVec = register_counter_vec!(
+        "probe_exec_triggered_total",
+        "triggered counter for exec probe plugin",
+        &["plugin", "cmd"]
+    )
+    .unwrap();
+}
+
+#[async_trait]
 impl Probe for Exec {
-    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()> {
+    fn local_schedule(&self) -> Option<String> {
+        self.schedule.to_owned()
+    }
+
+    async fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()> {
         log::info!("executing command {:?} with args {:?}", self.cmd, self.args);
+        RUNS_TOTAL
+            .with_label_values(&["probe.exec", &self.cmd])
+            .inc();
 
         let mut cmd = Command::new(&self.cmd);
         if let Some(args) = &self.args {
@@ -47,12 +72,11 @@ impl Probe for Exec {
                     ),
                     message_html: None,
                 },
-            )?
+            )?;
+            TRIGGERED_TOTAL
+                .with_label_values(&["probe.exec", &self.cmd])
+                .inc();
         }
         Ok(())
-    }
-
-    fn local_schedule(&self) -> Option<String> {
-        self.schedule.to_owned()
     }
 }

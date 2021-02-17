@@ -2,8 +2,11 @@ use super::Alert;
 use super::Notification;
 use super::Probe;
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 use atom_syndication::Feed;
 use fancy_regex::Regex;
+use lazy_static::lazy_static;
+use prometheus::{register_counter_vec, CounterVec};
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 
@@ -16,11 +19,34 @@ pub struct Atom {
     content_regex: Option<String>,
 }
 
-impl Probe for Atom {
-    fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()> {
-        log::info!("checking atom feed {}", self.feed_url);
+lazy_static! {
+    static ref RUNS_TOTAL: CounterVec = register_counter_vec!(
+        "probe_atom_runs_total",
+        "run counter for Atom probe plugin",
+        &["plugin", "feed_url"]
+    )
+    .unwrap();
+    static ref TRIGGERED_TOTAL: CounterVec = register_counter_vec!(
+        "probe_atom_triggered_total",
+        "triggered counter for Atom probe plugin",
+        &["plugin", "feed_url"]
+    )
+    .unwrap();
+}
 
-        let content = reqwest::blocking::get(&self.feed_url)?.bytes()?;
+#[async_trait]
+impl Probe for Atom {
+    fn local_schedule(&self) -> Option<String> {
+        self.schedule.to_owned()
+    }
+
+    async fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()> {
+        log::info!("checking atom feed {}", self.feed_url);
+        RUNS_TOTAL
+            .with_label_values(&["probe.atom", &self.feed_url])
+            .inc();
+
+        let content = reqwest::get(&self.feed_url).await?.bytes().await?;
         let feed = Feed::read_from(&content[..])?;
 
         if let Some(latest) = feed.entries.first() {
@@ -67,12 +93,11 @@ impl Probe for Atom {
                         message_html: Some(format!("{}<br>{}<br>{}", title, link, &message)),
                     },
                 )?;
+                TRIGGERED_TOTAL
+                    .with_label_values(&["probe.atom", &self.feed_url])
+                    .inc();
             }
         }
         Ok(())
-    }
-
-    fn local_schedule(&self) -> Option<String> {
-        self.schedule.to_owned()
     }
 }
