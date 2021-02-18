@@ -1,0 +1,6 @@
+target
+Dockerfile
+**/*.rs.bk
+.dockerignore
+.git
+.gitignore
