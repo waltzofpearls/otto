@@ -1,7 +1,7 @@
 use super::Alert;
 use super::Notification;
 use super::Probe;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 use prometheus::{register_counter_vec, CounterVec};
@@ -48,35 +48,47 @@ impl Probe for Exec {
         if let Some(args) = &self.args {
             cmd.args(args);
         }
-        let output = cmd.output().with_context(|| "failed to execute command")?;
-        if !output.status.success() {
-            log::warn!(
-                "_TRIGGERED_: failed executing command {} with args {:?}",
-                self.cmd,
-                self.args,
-            );
-            self.notify(
-                alerts,
-                Notification {
-                    from: "exec".to_owned(),
-                    name: self.name("exec", self.name.to_owned()),
-                    check: format!("command `{}` with args `{:?}`", self.cmd, self.args),
-                    title: format!(
-                        "`{}` `{:?}` got code {}",
-                        self.cmd, self.args, output.status
-                    ),
-                    message: format!(
-                        "{}: {}",
+        match cmd.output() {
+            Err(err) => {
+                log::error!(
+                    "failed executing command {} with args {:?}: {}",
+                    self.cmd,
+                    self.args,
+                    err
+                );
+            }
+            Ok(output) => {
+                if !output.status.success() {
+                    log::warn!(
+                        "_TRIGGERED_: command {} with args {:?} got code {}",
+                        self.cmd,
+                        self.args,
                         output.status,
-                        String::from_utf8_lossy(&output.stderr)
-                    ),
-                    message_html: None,
-                },
-            )?;
-            TRIGGERED_TOTAL
-                .with_label_values(&["probe.exec", &self.cmd])
-                .inc();
-        }
+                    );
+                    self.notify(
+                        alerts,
+                        Notification {
+                            from: "exec".to_owned(),
+                            name: self.name("exec", self.name.to_owned()),
+                            check: format!("command `{}` with args `{:?}`", self.cmd, self.args),
+                            title: format!(
+                                "`{}` `{:?}` got code {}",
+                                self.cmd, self.args, output.status
+                            ),
+                            message: format!(
+                                "{}: {}",
+                                output.status,
+                                String::from_utf8_lossy(&output.stderr)
+                            ),
+                            message_html: None,
+                        },
+                    )?;
+                    TRIGGERED_TOTAL
+                        .with_label_values(&["probe.exec", &self.cmd])
+                        .inc();
+                }
+            }
+        };
         Ok(())
     }
 }

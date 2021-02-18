@@ -11,4 +11,7 @@ lint:
 
 docker:
 	docker build -t otto .
-	docker run -it --rm -v $$PWD/$(APP_NAME).toml:/etc/$(APP_NAME)/$(APP_NAME).toml $(APP_NAME)
+	docker run -it --rm \
+		-p 9999:9999 \
+		-v $$PWD/$(APP_NAME).toml:/etc/$(APP_NAME)/$(APP_NAME).toml \
+		$(APP_NAME)
