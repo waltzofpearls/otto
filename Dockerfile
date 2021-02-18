@@ -22,6 +22,8 @@ ARG APP_NAME
 ENV APP_NAME=${APP_NAME}
 WORKDIR /usr/local/bin
 
+RUN apk add --no-cache -U openssl
+
 COPY --from=builder /app/${APP_NAME}/target/release/${APP_NAME} ${APP_NAME}
 
 CMD ${APP_NAME}
