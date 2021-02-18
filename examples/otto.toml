@@ -2,21 +2,21 @@ schedule = "0 * * * * *"
 log_level = "info"
 
 [prometheus]
-listen = "127.0.0.1:9999"
+listen = "0.0.0.0:9999"
 path = "/metrics"
 
 [[probes.exec]]
-schedule = "0/30 * * * * *"
-cmd = "./test.sh"
+cmd = "./examples/check_ssl_cert.sh"
+args = ["github.com"]
 
 [[probes.http]]
-schedule = "0/30 * * * * *"
+schedule = "0/5 * * * * *"
 url = "https://google.ca"
 method = "get"
 expected_code = 200
 
 [[probes.http]]
-schedule = "0/50 * * * * *"
+schedule = "0/5 * * * * *"
 url = "https://httpbin.org/post"
 method = "post"
 headers = { Content-Type = "application/json" }
@@ -28,6 +28,13 @@ expected_code = 200
 
 [[probes.atom]]
 schedule = "0 * * * * *"
+# name = "aaa111"
+feed_url = "https://feeds.feedburner.com/herokustatus"
+title_regex = "^(?!.*Resolved).*"
+
+[[probes.atom]]
+schedule = "0 * * * * *"
+# name = "bbb222"
 feed_url = "https://www.cloudflarestatus.com/history.atom"
 # Content should contain Investigating and not contain Resolved
 # for regex lookahead and negative look ahead see the following stack overflow answer
@@ -43,9 +50,11 @@ feed_url = "https://www.githubstatus.com/history.rss"
 description_regex = "^(?=.*Investigating)(?!.*Resolved).*"
 
 [[alerts.slack]]
+# namepass = ["atom.bbb222"]
 webhook_url = "https://hooks.slack.com/services/abc/123/45z"
 
 [[alerts.email]]
+# namepass = ["atom.aaa111"]
 smtp_relay = "smtp.gmail.com"
 smtp_username = "some.username@gmail.com"
 smtp_password = "some.app.password"
