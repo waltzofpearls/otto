@@ -28,12 +28,10 @@ Otto is good at:
 [github-status]: https://www.githubstatus.com/
 [heroku-status]: https://status.heroku.com/
 
-agent that probes various sources and then alert on failures.
-
 Otto is equipped with **Probe** plugins:
 
-- Atom
-- RSS
+- Atom feed
+- RSS feed
 - HTTP
 - Exec (shell scripts)
 
@@ -41,64 +39,21 @@ Otto is equipped with **Probe** plugins:
 
 - Slack
 - Email (SMTP)
-- [WIP] Webhook
+- Webhook
 
 And `/metrics` endpoint for promethues.
 
-Plugins are configurable:
+Plugins are [configurable](./examples/README.md#configure-it).
 
-```toml
-schedule = "0 * * * * *"
-log_level = "info"
+### Try it
 
-[prometheus]
-listen = "127.0.0.1:9999"
-path = "/metrics"
+Copy `simple.toml` from `examples` folder, and rename it to `otto.toml`.
 
-[[probes.exec]]
-schedule = "0/30 * * * * *"
-cmd = "./test.sh"
-
-[[probes.http]]
-schedule = "0/30 * * * * *"
-url = "https://google.ca"
-method = "get"
-expected_code = 200
-
-[[probes.http]]
-schedule = "0/50 * * * * *"
-url = "https://httpbin.org/post"
-method = "post"
-headers = { Content-Type = "application/json" }
-json = """{
-    "key1": "value1",
-    "key2": "value2"
-}"""
-expected_code = 200
-
-[[probes.atom]]
-schedule = "0 * * * * *"
-feed_url = "https://www.cloudflarestatus.com/history.atom"
-# Content should contain Investigating and not contain Resolved
-# for regex lookahead and negative look ahead see the following stack overflow answer
-# https://stackoverflow.com/questions/8240765/is-there-a-regex-to-match-a-string-that-contains-a-but-does-not-contain-b
-content_regex = "^(?=.*Investigating)(?!.*Resolved).*"
-
-[[probes.rss]]
-schedule = "0 * * * * *"
-feed_url = "https://www.githubstatus.com/history.rss"
-# Content should contain Investigating and not contain Resolved
-# for regex lookahead and negative look ahead see the following stack overflow answer
-# https://stackoverflow.com/questions/8240765/is-there-a-regex-to-match-a-string-that-contains-a-but-does-not-contain-b
-description_regex = "^(?=.*Investigating)(?!.*Resolved).*"
-
-[[alerts.slack]]
-webhook_url = "https://hooks.slack.com/services/abc/123/45z"
-
-[[alerts.email]]
-smtp_relay = "smtp.gmail.com"
-smtp_username = "some.username@gmail.com"
-smtp_password = "some.app.password"
-from = "Otto <otto@ottobot.io>"
-to = "Joe Smith <joe@smith.com>"
+```shell
+cp examples/simple.toml otto.toml
 ```
+
+Open `otto.toml` with an editor. In `alerts.slack`, replace the fake url with an actual webhook url copied from Slack.
+
+If you have rust installed on your computer, run otto locally with `make run`, it needs `rustc` and `cargo`, or run it
+with `make docker`, if your machine has docker installed.

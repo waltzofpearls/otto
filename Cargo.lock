@@ -1497,7 +1497,7 @@ checksum = "afb2e1c3ee07430c2cf76151675e583e0f19985fa6efae47d6848a3e2c824f85"
 
 [[package]]
 name = "otto"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1518,6 +1518,7 @@ dependencies = [
  "rss",
  "serde",
  "serde_derive",
+ "serde_json",
  "simple_logger",
  "slack-hook",
  "tokio 1.2.0",

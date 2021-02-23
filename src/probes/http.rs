@@ -97,7 +97,8 @@ impl Probe for HTTP {
                     ),
                     message_html: None,
                 },
-            )?;
+            )
+            .await?;
             TRIGGERED_TOTAL
                 .with_label_values(&["probe.http", &self.url, &self.method])
                 .inc();

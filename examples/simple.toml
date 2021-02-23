@@ -1,0 +1,17 @@
+# Run once a minute
+schedule = "0 * * * * *"
+log_level = "info"
+
+[prometheus]
+# Have prometheus metrics exposed at http://localhost:9999/metrics
+listen = "0.0.0.0:9999"
+path = "/metrics"
+
+[[probes.rss]]
+feed_url = "https://www.githubstatus.com/history.rss"
+# Description should contain Investigating and not contain Resolved
+description_regex = "^(?=.*Investigating)(?!.*Resolved).*"
+
+[[alerts.slack]]
+# Create a webhook in slack and put the webhook url here
+webhook_url = "https://hooks.slack.com/services/abc/123/45z"

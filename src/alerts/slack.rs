@@ -1,6 +1,7 @@
 use super::Alert;
 use super::Notification;
 use anyhow::Result;
+use async_trait::async_trait;
 use lazy_static::lazy_static;
 use prometheus::{register_counter_vec, CounterVec};
 use serde_derive::Deserialize;
@@ -21,12 +22,13 @@ lazy_static! {
     .unwrap();
 }
 
+#[async_trait]
 impl Alert for Slack {
     fn namepass(&self) -> Option<Vec<String>> {
         self.namepass.clone()
     }
 
-    fn notify(&self, notif: &Notification) -> Result<()> {
+    async fn notify(&self, notif: &Notification) -> Result<()> {
         if !self.should_fire(&notif.name) {
             log::info!("should not fire slack alert for {}", &notif.name);
             return Ok(());
