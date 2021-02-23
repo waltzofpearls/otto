@@ -1,6 +1,4 @@
-use super::probes::Notification;
-use super::register_plugins;
-use super::Config;
+use super::{probes::Notification, register_plugins, Config};
 use anyhow::Result;
 use async_trait::async_trait;
 use serde_derive::Deserialize;

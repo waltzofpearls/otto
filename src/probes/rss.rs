@@ -1,11 +1,9 @@
-use super::Alert;
-use super::Notification;
-use super::Probe;
+use super::{Alert, Notification, Probe};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use fancy_regex::Regex;
 use lazy_static::lazy_static;
-use prometheus::{register_counter_vec, CounterVec};
+use prometheus::{register_counter_vec, register_gauge_vec, CounterVec, GaugeVec};
 use rss::Channel;
 use serde_derive::Deserialize;
 use std::collections::HashMap;
@@ -32,6 +30,12 @@ lazy_static! {
         &["plugin", "feed_url"]
     )
     .unwrap();
+    static ref TRIGGERED: GaugeVec = register_gauge_vec!(
+        "probe_rss_triggered",
+        "RSS probe plugin triggered",
+        &["plugin", "feed_url"]
+    )
+    .unwrap();
 }
 
 #[async_trait]
@@ -46,6 +50,7 @@ impl Probe for RSS {
             .with_label_values(&["probe.rss", &self.feed_url])
             .inc();
 
+        let mut triggered = 0;
         let content = reqwest::get(&self.feed_url).await?.bytes().await?;
         let feed = Channel::read_from(&content[..])?;
 
@@ -101,8 +106,12 @@ impl Probe for RSS {
                 TRIGGERED_TOTAL
                     .with_label_values(&["probe.rss", &self.feed_url])
                     .inc();
+                triggered = 1;
             }
         }
+        TRIGGERED
+            .with_label_values(&["probe.rss", &self.feed_url])
+            .set(triggered as f64);
         Ok(())
     }
 }

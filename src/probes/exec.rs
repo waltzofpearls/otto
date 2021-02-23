@@ -1,13 +1,10 @@
-use super::Alert;
-use super::Notification;
-use super::Probe;
+use super::{Alert, Notification, Probe};
 use anyhow::Result;
 use async_trait::async_trait;
 use lazy_static::lazy_static;
-use prometheus::{register_counter_vec, CounterVec};
+use prometheus::{register_counter_vec, register_gauge_vec, CounterVec, GaugeVec};
 use serde_derive::Deserialize;
-use std::collections::HashMap;
-use std::process::Command;
+use std::{collections::HashMap, process::Command};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Exec {
@@ -30,6 +27,12 @@ lazy_static! {
         &["plugin", "cmd"]
     )
     .unwrap();
+    static ref TRIGGERED: GaugeVec = register_gauge_vec!(
+        "probe_exec_triggered",
+        "Exec probe plugin triggered",
+        &["plugin", "cmd"]
+    )
+    .unwrap();
 }
 
 #[async_trait]
@@ -44,6 +47,7 @@ impl Probe for Exec {
             .with_label_values(&["probe.exec", &self.cmd])
             .inc();
 
+        let mut triggered = 0;
         let mut cmd = Command::new(&self.cmd);
         if let Some(args) = &self.args {
             cmd.args(args);
@@ -87,9 +91,13 @@ impl Probe for Exec {
                     TRIGGERED_TOTAL
                         .with_label_values(&["probe.exec", &self.cmd])
                         .inc();
+                    triggered = 1;
                 }
             }
         };
+        TRIGGERED
+            .with_label_values(&["probe.exec", &self.cmd])
+            .set(triggered as f64);
         Ok(())
     }
 }
