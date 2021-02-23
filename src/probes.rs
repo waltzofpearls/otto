@@ -1,6 +1,4 @@
-use super::alerts::Alert;
-use super::register_plugins;
-use super::Config;
+use super::{alerts::Alert, register_plugins, Config};
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::Utc;

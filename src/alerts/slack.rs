@@ -1,5 +1,4 @@
-use super::Alert;
-use super::Notification;
+use super::{Alert, Notification};
 use anyhow::Result;
 use async_trait::async_trait;
 use lazy_static::lazy_static;

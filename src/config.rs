@@ -1,5 +1,4 @@
-use super::alerts::Alerts;
-use super::probes::Probes;
+use super::{alerts::Alerts, probes::Probes};
 use serde_derive::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]

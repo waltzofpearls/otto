@@ -2,9 +2,11 @@ use super::{Alert, Notification};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use lazy_static::lazy_static;
-use lettre::message::{header, Mailbox, MultiPart, SinglePart};
-use lettre::transport::smtp::authentication::Credentials;
-use lettre::{Message, SmtpTransport, Transport};
+use lettre::{
+    message::{header, Mailbox, MultiPart, SinglePart},
+    transport::smtp::authentication::Credentials,
+    Message, SmtpTransport, Transport,
+};
 use prometheus::{register_counter_vec, CounterVec};
 use serde_derive::Deserialize;
 
