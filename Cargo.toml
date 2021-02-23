@@ -1,6 +1,6 @@
 [package]
 name = "otto"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Rollie Ma <rollie@rollie.dev>"]
 edition = "2018"
 
@@ -26,6 +26,7 @@ reqwest = { version = "0.11.0", default-features = false, features = ["blocking"
 rss = "1.10.0"
 serde = "1.0.123"
 serde_derive = "1.0.123"
+serde_json = "1.0.62"
 simple_logger = "1.11.0"
 slack-hook = "0.8.0"
 tokio = { version = "1", features = ["full"] }

@@ -5,7 +5,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use chrono::Utc;
 use cron::Schedule;
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 pub mod atom;
@@ -89,7 +89,7 @@ pub trait Probe: Send + Sync {
         )
     }
 
-    fn notify(
+    async fn notify(
         &self,
         alerts: &HashMap<String, Vec<Box<dyn Alert>>>,
         notif: Notification,
@@ -102,16 +102,17 @@ pub trait Probe: Send + Sync {
                 name
             );
             for plugin in plugins.iter() {
-                plugin.notify(&notif).unwrap_or_else(|err| {
+                plugin.notify(&notif).await.unwrap_or_else(|err| {
                     log::error!("[alert][{}] error running plugin: {}", name, err)
                 })
             }
         }
+
         Ok(())
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Notification {
     pub from: String,
     pub name: String,

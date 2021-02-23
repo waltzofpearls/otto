@@ -1,6 +1,6 @@
-use super::Alert;
-use super::Notification;
+use super::{Alert, Notification};
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 use lazy_static::lazy_static;
 use lettre::message::{header, Mailbox, MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
@@ -27,12 +27,13 @@ lazy_static! {
     .unwrap();
 }
 
+#[async_trait]
 impl Alert for Email {
     fn namepass(&self) -> Option<Vec<String>> {
         self.namepass.clone()
     }
 
-    fn notify(&self, notif: &Notification) -> Result<()> {
+    async fn notify(&self, notif: &Notification) -> Result<()> {
         if !self.should_fire(&notif.name) {
             log::info!("should not fire email alert for {}", &notif.name);
             return Ok(());

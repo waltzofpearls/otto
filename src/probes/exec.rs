@@ -82,7 +82,8 @@ impl Probe for Exec {
                             ),
                             message_html: None,
                         },
-                    )?;
+                    )
+                    .await?;
                     TRIGGERED_TOTAL
                         .with_label_values(&["probe.exec", &self.cmd])
                         .inc();

@@ -92,7 +92,8 @@ impl Probe for Atom {
                         message: format!("{}\n{}\n{}", title, link, html2md::parse_html(&message)),
                         message_html: Some(format!("{}<br>{}<br>{}", title, link, &message)),
                     },
-                )?;
+                )
+                .await?;
                 TRIGGERED_TOTAL
                     .with_label_values(&["probe.atom", &self.feed_url])
                     .inc();
