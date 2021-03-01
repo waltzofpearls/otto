@@ -9,16 +9,25 @@ use std::{
     pin::Pin,
     task::{Context as TaskContext, Poll},
 };
+use tokio::sync::broadcast;
 
-pub fn listen_and_serve(config: &Config) -> Result<()> {
+pub fn listen_and_serve(config: &Config, stop_tx: broadcast::Sender<bool>) -> Result<()> {
     if let Some(prometheus) = config.prometheus.clone() {
         let addr = prometheus.listen.parse()?;
         let server = Server::bind(&addr).serve(MakeSvc {
             prometheus: prometheus.clone(),
         });
+        let mut stop_rx = stop_tx.subscribe();
+        let graceful = server.with_graceful_shutdown(async move {
+            if let Err(err) = stop_rx.recv().await {
+                log::error!("failed to install graceful shutdown handler: {}", err);
+                return;
+            }
+            log::info!("gracefully shutting down prometheus server...");
+        });
         tokio::spawn(async move {
             log::info!("listening on http://{}{}...", addr, prometheus.path);
-            if let Err(err) = server.await {
+            if let Err(err) = graceful.await {
                 log::error!("prometheus server error: {}", err);
             }
         });

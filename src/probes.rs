@@ -5,6 +5,7 @@ use chrono::Utc;
 use cron::Schedule;
 use serde_derive::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr, sync::Arc};
+use tokio::{sync::broadcast, time::sleep};
 
 pub mod atom;
 pub mod exec;
@@ -32,6 +33,7 @@ pub fn start(
     config: &Config,
     probes: HashMap<String, Vec<Box<dyn Probe>>>,
     alerts: HashMap<String, Vec<Box<dyn Alert>>>,
+    stop_tx: broadcast::Sender<bool>,
 ) -> Result<()> {
     // to be shared by concurrent tokio tasks
     let alerts = Arc::new(alerts);
@@ -43,20 +45,28 @@ pub fn start(
             let schedule = Schedule::from_str(&plugin.schedule(&global))?;
             let name = name.clone();
             let cloned_alerts = Arc::clone(&alerts);
+            let mut stop_rx = stop_tx.subscribe();
             tokio::spawn(async move {
                 let local_alerts = cloned_alerts;
                 for datetime in schedule.upcoming(Utc) {
                     let now = Utc::now();
                     if let Ok(duration) = datetime.signed_duration_since(now).to_std() {
-                        tokio::time::sleep(duration).await;
-                        plugin
-                            .observe(local_alerts.as_ref())
-                            .await
-                            .unwrap_or_else(|err| {
-                                log::error!("[probe][{}] error running plugin: {}", name, err);
-                            });
-                    }
-                }
+                        tokio::select! {
+                            _ = sleep(duration) => {
+                                plugin
+                                    .observe(local_alerts.as_ref())
+                                    .await
+                                    .unwrap_or_else(|err| {
+                                        log::error!("[probe][{}] error running plugin: {}", name, err);
+                                    });
+                            }
+                            _ = stop_rx.recv() => {
+                                log::info!("[probe][{}] stopping plugin...", name);
+                                break;
+                            }
+                        } // end select!
+                    } // end if
+                } // end for
             });
         }
     }

@@ -1,5 +1,4 @@
 schedule = "0 * * * * *"
-log_level = "info"
 
 [prometheus]
 listen = "0.0.0.0:9999"
