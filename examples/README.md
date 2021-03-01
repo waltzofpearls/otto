@@ -2,11 +2,11 @@
 
 ### Configure it
 
-Otto is configured by a combination of command line options and YAML config file.
+Otto is configured by a combination of command line options and TOML config file.
 
 Command line options can specify path to config file and log level filter:
 
-- `-c, --config`: path to YAML config file
+- `-c, --config`: path to TOML config file
   - default value: `/etc/otto/otto.toml`
   - example: `otto -c ./examples/simple.toml`
 - `-l, --log-level`: log level filter
