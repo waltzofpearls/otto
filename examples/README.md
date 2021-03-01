@@ -2,9 +2,16 @@
 
 ### Configure it
 
-By default, otto will look for config file at /etc/otto/otto.toml. A custom config file path can be
-passed to otto with `--config, -c` option. Log level is defaulted to `info`, and it's configurable
-through `--log_level, -l` option.
+Otto is configured by a combination of command line options and YAML config file.
+
+Command line options can specify path to config file and log level filter:
+
+- `-c, --config`: path to YAML config file
+  - default value: `/etc/otto/otto.toml`
+  - example: `otto -c ./examples/simple.toml`
+- `-l, --log-level`: log level filter
+  - default value: `info`
+  - more options: `error`, `warn`, `debug` and `trace`
 
 A complete config file is consisted of global configs, probe plugins and alert plugins.
 
@@ -114,5 +121,5 @@ headers = { Content-Type = "application/json" }
 
 More examples:
 
-- [simple.toml](./simple.toml): one probe and one alert
-- [fancy.toml](./fancy.toml): many probes and many alerts
+- [`simple.toml`](./simple.toml): one probe and one alert
+- [`fancy.toml`](./fancy.toml): many probes and many alerts

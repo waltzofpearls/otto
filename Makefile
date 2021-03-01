@@ -6,7 +6,7 @@ build:
 
 .PHONY: run
 run:
-	cargo run -- --config $(APP_NAME).toml
+	cargo run -- --config $(APP_NAME).toml --log-level info
 
 .PHONY: lint
 lint:
