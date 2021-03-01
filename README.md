@@ -43,7 +43,7 @@ Otto is equipped with **Probe** plugins:
 
 And `/metrics` endpoint for promethues.
 
-Plugins are [configurable](./examples/README.md#configure-it).
+Plugins are [configurable](./examples/README.md#configure-it), and can be reloaded by `kill -SIGHUP $(pidof otto)`.
 
 ### Try it
 
@@ -57,3 +57,8 @@ Open `otto.toml` with an editor. In `alerts.slack`, replace the fake url with an
 
 If you have rust installed on your computer, run otto locally with `make run`, it needs `rustc` and `cargo`, or run it
 with `make docker`, if your machine has docker installed.
+
+### Known issues
+
+In alpine linux, firing slack and email alerts will trigger segmentation fault. This issue might be caused by calling
+slack-hook and lettre libs inside async runtime. It's possbile the segfault is related to musl libc.

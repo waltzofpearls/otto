@@ -1,6 +1,5 @@
 # Run once a minute
 schedule = "0 * * * * *"
-log_level = "info"
 
 [prometheus]
 # Have prometheus metrics exposed at http://localhost:9999/metrics

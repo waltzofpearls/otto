@@ -3,7 +3,8 @@
 ### Configure it
 
 By default, otto will look for config file at /etc/otto/otto.toml. A custom config file path can be
-passed to otto with `-c /custom/config/path.toml` or `--config /custom/config/path.toml`.
+passed to otto with `--config, -c` option. Log level is defaulted to `info`, and it's configurable
+through `--log_level, -l` option.
 
 A complete config file is consisted of global configs, probe plugins and alert plugins.
 
@@ -11,7 +12,6 @@ A complete config file is consisted of global configs, probe plugins and alert p
 
 ```toml
 schedule = "0 * * * * *"
-log_level = "info"
 
 [prometheus]
 listen = "127.0.0.1:9999"

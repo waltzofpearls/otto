@@ -4,7 +4,6 @@ use serde_derive::Deserialize;
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub schedule: String,
-    pub log_level: String,
     pub prometheus: Option<Prometheus>,
     pub probes: Option<Probes>,
     pub alerts: Option<Alerts>,
