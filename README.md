@@ -1,3 +1,5 @@
+<img align="right" width="160" src="https://user-images.githubusercontent.com/965430/109471904-4b8fe700-7a26-11eb-8b65-228b2ac5910a.png">
+
 # otto
 
 [![Build Status][actions-badge]][actions-url]
