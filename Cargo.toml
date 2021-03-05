@@ -1,6 +1,6 @@
 [package]
 name = "otto"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Rollie Ma <rollie@rollie.dev>"]
 edition = "2018"
 publish = false
@@ -20,6 +20,7 @@ hyper = { version = "0.14", features = ["full"] }
 lazy_static = "1.4.0"
 lettre = "0.10.0-alpha.4"
 log = "0.4.14"
+openssl = { version = "0.10.32", features = ["vendored"] }
 prometheus = { version = "0.11.0", features = ["process"] }
 reqwest = { version = "0.11.0", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 rss = "1.10.0"

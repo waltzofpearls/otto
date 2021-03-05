@@ -60,6 +60,20 @@ Open `otto.toml` with an editor. In `alerts.slack`, replace the fake url with an
 If you have rust installed on your computer, run otto locally with `make run`, it needs `rustc` and `cargo`, or run it
 with `make docker`, if your machine has docker installed.
 
+### Run it
+
+Download from releases:
+
+- `MacOS with Intel CPU`: use `otto-x86_64-apple-darwin-{version}.zip`
+- `Linux with x86_64 CPU`: use `otto-x86_64-unknown-linux-gnu-{version}.tar.gz`
+- `Raspberry Pi`: use `otto-armv7-unknown-linux-gnueabihf-{version}.tar.gz`
+
+Extract the package with `unzip` or `tar`, navigate into the extracted directory, you should see `otto`'s binary file,
+this README and an `examples` subdirectory.
+
+Run `otto` from there, or copy it into your `PATH` (eg. `/usr/local/bin`). For config file, use `examples/simple.toml`
+or `examples/fancy.toml` as template. Read more about config [here](./examples/README.md#configure-it).
+
 ### Known issues
 
 In alpine linux, firing slack and email alerts will trigger segmentation fault. This issue might be caused by calling
