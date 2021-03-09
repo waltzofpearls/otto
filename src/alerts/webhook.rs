@@ -6,7 +6,7 @@ use prometheus::{register_counter_vec, CounterVec};
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct Webhook {
     namepass: Option<Vec<String>>,
     url: String,
@@ -24,6 +24,13 @@ lazy_static! {
 
 #[async_trait]
 impl Alert for Webhook {
+    fn new(namepass: Vec<&str>) -> Self {
+        Webhook {
+            namepass: Some(namepass.into_iter().map(String::from).collect()),
+            ..Default::default()
+        }
+    }
+
     fn namepass(&self) -> Option<Vec<String>> {
         self.namepass.clone()
     }

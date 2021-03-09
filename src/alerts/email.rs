@@ -10,7 +10,7 @@ use lettre::{
 use prometheus::{register_counter_vec, CounterVec};
 use serde_derive::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct Email {
     namepass: Option<Vec<String>>,
     smtp_relay: String,
@@ -31,6 +31,13 @@ lazy_static! {
 
 #[async_trait]
 impl Alert for Email {
+    fn new(namepass: Vec<&str>) -> Self {
+        Email {
+            namepass: Some(namepass.into_iter().map(String::from).collect()),
+            ..Default::default()
+        }
+    }
+
     fn namepass(&self) -> Option<Vec<String>> {
         self.namepass.clone()
     }

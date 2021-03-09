@@ -8,7 +8,7 @@ use rss::Channel;
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct RSS {
     name: Option<String>,
     schedule: Option<String>,
@@ -40,6 +40,12 @@ lazy_static! {
 
 #[async_trait]
 impl Probe for RSS {
+    fn new() -> Self {
+        RSS {
+            ..Default::default()
+        }
+    }
+
     fn local_schedule(&self) -> Option<String> {
         self.schedule.to_owned()
     }

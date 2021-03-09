@@ -12,7 +12,7 @@ pub mod exec;
 pub mod http;
 pub mod rss;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct Probes {
     pub atom: Option<Vec<atom::Atom>>,
     pub exec: Option<Vec<exec::Exec>>,
@@ -76,6 +76,9 @@ pub fn start(
 
 #[async_trait]
 pub trait Probe: Send + Sync {
+    fn new() -> Self
+    where
+        Self: Sized;
     fn local_schedule(&self) -> Option<String>;
     async fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()>;
 
@@ -120,7 +123,7 @@ pub trait Probe: Send + Sync {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Default, Serialize)]
 pub struct Notification {
     pub from: String,
     pub name: String,
@@ -130,4 +133,57 @@ pub struct Notification {
     // alert message
     pub message: String,
     pub message_html: Option<String>,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    macro_rules! test_probe {
+        ($test_name:ident, $t:ty) => {
+            #[tokio::test]
+            async fn $test_name() {
+                test_probe_notify::<$t>().await;
+            }
+        };
+    }
+
+    async fn test_probe_notify<T: Probe>() {
+        let plugin: T = T::new();
+        let mock_alert = MockAlert::new(vec![""]);
+        let mut alerts_vec: Vec<Box<dyn Alert>> = Vec::new();
+        alerts_vec.push(Box::new(mock_alert));
+        let mut alerts_map = HashMap::new();
+        alerts_map.insert(String::from("mock_alert"), alerts_vec);
+        let result = plugin
+            .notify(
+                &alerts_map,
+                Notification {
+                    ..Default::default()
+                },
+            )
+            .await;
+
+        assert_eq!(true, result.is_ok())
+    }
+
+    struct MockAlert {}
+
+    #[async_trait]
+    impl Alert for MockAlert {
+        fn new(_namepass: Vec<&str>) -> Self {
+            MockAlert {}
+        }
+        fn namepass(&self) -> Option<Vec<String>> {
+            None
+        }
+        async fn notify(&self, _notif: &Notification) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    test_probe!(test_atom_notify, atom::Atom);
+    test_probe!(test_exec_notify, exec::Exec);
+    test_probe!(test_http_notify, http::HTTP);
+    test_probe!(test_rss_notify, self::rss::RSS);
 }

@@ -6,7 +6,7 @@ use prometheus::{register_counter_vec, CounterVec};
 use serde_derive::Deserialize;
 use slack_hook::{PayloadBuilder, Slack as SlackHook};
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct Slack {
     namepass: Option<Vec<String>>,
     webhook_url: String,
@@ -23,6 +23,13 @@ lazy_static! {
 
 #[async_trait]
 impl Alert for Slack {
+    fn new(namepass: Vec<&str>) -> Self {
+        Slack {
+            namepass: Some(namepass.into_iter().map(String::from).collect()),
+            ..Default::default()
+        }
+    }
+
     fn namepass(&self) -> Option<Vec<String>> {
         self.namepass.clone()
     }
