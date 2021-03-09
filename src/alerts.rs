@@ -26,6 +26,9 @@ pub fn register_from(config: &Config) -> HashMap<String, Vec<Box<dyn Alert>>> {
 
 #[async_trait]
 pub trait Alert: Send + Sync {
+    fn new(namepass: Vec<&str>) -> Self
+    where
+        Self: Sized;
     fn namepass(&self) -> Option<Vec<String>>;
     async fn notify(&self, notif: &Notification) -> Result<()>;
 
@@ -44,4 +47,30 @@ pub trait Alert: Send + Sync {
             None => true,
         }
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    macro_rules! test_alert {
+        ($test_name:ident, $t:ty) => {
+            #[test]
+            pub fn $test_name() {
+                test_alert_should_fire::<$t>();
+            }
+        };
+    }
+
+    fn test_alert_should_fire<T: Alert>() {
+        let plugin: T = T::new(vec!["super-mario", "pokemon-go"]);
+
+        assert_eq!(true, plugin.should_fire("super-mario"));
+        assert_eq!(true, plugin.should_fire("pokemon-go"));
+        assert_eq!(false, plugin.should_fire("overcooked"));
+    }
+
+    test_alert!(test_email_should_fire, email::Email);
+    test_alert!(test_slack_should_fire, slack::Slack);
+    test_alert!(test_webhook_should_fire, webhook::Webhook);
 }

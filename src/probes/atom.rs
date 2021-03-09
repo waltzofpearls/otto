@@ -8,7 +8,7 @@ use prometheus::{register_counter_vec, register_gauge_vec, CounterVec, GaugeVec}
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct Atom {
     name: Option<String>,
     schedule: Option<String>,
@@ -40,6 +40,12 @@ lazy_static! {
 
 #[async_trait]
 impl Probe for Atom {
+    fn new() -> Self {
+        Atom {
+            ..Default::default()
+        }
+    }
+
     fn local_schedule(&self) -> Option<String> {
         self.schedule.to_owned()
     }
