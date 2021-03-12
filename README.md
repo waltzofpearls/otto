@@ -43,7 +43,7 @@ Otto is equipped with **Probe** plugins:
 - Email (SMTP)
 - Webhook
 
-And `/metrics` endpoint for promethues.
+And `http://0.0.0.0:9999/metrics` endpoint for promethues.
 
 Plugins are [configurable](./examples/README.md#configure-it), and can be reloaded by `kill -SIGHUP $(pidof otto)`.
 

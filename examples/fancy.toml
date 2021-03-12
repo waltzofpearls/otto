@@ -2,7 +2,7 @@ schedule = "0 * * * * *"
 
 [prometheus]
 listen = "0.0.0.0:9999"
-path = "/metrics"
+path = "metrics"
 
 [[probes.exec]]
 cmd = "./examples/check_ssl_cert.sh"

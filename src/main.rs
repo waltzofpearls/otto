@@ -1,7 +1,7 @@
 mod alerts;
 mod config;
-mod metrics;
 mod probes;
+mod web;
 
 #[macro_use]
 mod macros;
@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
         let config: Config = toml::from_str(&buffer)
             .with_context(|| format!("could not parse toml config file `{}`", config_file))?;
 
-        metrics::listen_and_serve(&config, stop_tx.clone())?;
+        web::start(&config, stop_tx.clone())?;
 
         let probes = probes::register_from(&config);
         let alerts = alerts::register_from(&config);

@@ -2,9 +2,9 @@
 schedule = "0 * * * * *"
 
 [prometheus]
-# Have prometheus metrics exposed at http://localhost:9999/metrics
+# Have prometheus metrics exposed at http://0.0.0.0:9999/metrics
 listen = "0.0.0.0:9999"
-path = "/metrics"
+path = "metrics"
 
 [[probes.rss]]
 feed_url = "https://www.githubstatus.com/history.rss"

@@ -22,7 +22,7 @@ schedule = "0 * * * * *"
 
 [prometheus]
 listen = "127.0.0.1:9999"
-path = "/metrics"
+path = "metrics"
 ```
 
 #### Probe plugins
