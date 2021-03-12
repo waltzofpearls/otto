@@ -22,7 +22,7 @@ use tokio::{
 };
 
 #[derive(Clap)]
-#[clap(version = "0.3.1", author = "Rollie Ma <rollie@rollie.dev>")]
+#[clap(version = "0.4.0", author = "Rollie Ma <rollie@rollie.dev>")]
 struct Opts {
     #[clap(short, long, default_value = "/etc/otto/otto.toml")]
     config: String,
