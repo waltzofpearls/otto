@@ -12,6 +12,10 @@ run:
 lint:
 	cargo clippy --workspace --tests --all-features -- -D warnings
 
+.PHONY: test
+test:
+	cargo test
+
 .PHONY: cross
 cross: build
 	docker build -t $(APP)/cross -f cross.Dockerfile .
