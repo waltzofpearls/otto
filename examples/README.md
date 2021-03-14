@@ -21,7 +21,8 @@ A complete config file is consisted of global configs, probe plugins and alert p
 schedule = "0 * * * * *"
 
 [prometheus]
-listen = "127.0.0.1:9999"
+# Have prometheus metrics exposed at http://0.0.0.0:9999/metrics
+listen = "0.0.0.0:9999"
 path = "metrics"
 ```
 

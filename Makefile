@@ -16,6 +16,15 @@ lint:
 test:
 	cargo test
 
+.PHONY: cover
+cover:
+	docker run \
+		--security-opt seccomp=unconfined \
+		-v ${PWD}:/volume \
+		xd009642/tarpaulin \
+		cargo tarpaulin --out Html --output-dir ./target
+	open target/tarpaulin-report.html
+
 .PHONY: cross
 cross: build
 	docker build -t $(APP)/cross -f cross.Dockerfile .
