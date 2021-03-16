@@ -73,8 +73,3 @@ this README and an `examples` subdirectory.
 
 Run `otto` from there, or copy it into your `PATH` (eg. `/usr/local/bin`). For config file, use `examples/simple.toml`
 or `examples/fancy.toml` as template. Read more about config [here](./examples/README.md#configure-it).
-
-### Known issues
-
-In alpine linux, firing slack and email alerts will trigger segmentation fault. This issue might be caused by calling
-slack-hook and lettre libs inside async runtime. It's possbile the segfault is related to musl libc.
