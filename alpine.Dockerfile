@@ -1,29 +1,13 @@
-ARG APP_NAME=otto
-
-FROM rust:1.50.0-alpine3.13 as builder
-
-ARG APP_NAME
-WORKDIR /app/${APP_NAME}
-
-RUN apk add --no-cache -U musl-dev openssl openssl-dev
-
-COPY Cargo.toml Cargo.lock ./
-RUN mkdir src \
- && echo 'fn main() {println!("if you see this, the build broke")}' > src/main.rs \
- && cargo build --release \
- && rm -f target/release/deps/${APP_NAME}*
-
-COPY . .
-RUN cargo build --release
-
 FROM alpine:3.13
 
 ARG APP_NAME
+ARG VERSION
+ARG TARGET=x86_64-unknown-linux-musl
 ENV APP_NAME=${APP_NAME}
-WORKDIR /usr/local/bin
 
-RUN apk add --no-cache -U openssl
+RUN apk add --no-cache -U curl
 
-COPY --from=builder /app/${APP_NAME}/target/release/${APP_NAME} ${APP_NAME}
+RUN curl -L https://github.com/waltzofpearls/otto/releases/download/v${VERSION}/${APP_NAME}-${TARGET}-${VERSION}.tar.gz | tar xvz \
+ && mv ${APP_NAME} /usr/local/bin
 
 CMD ${APP_NAME}

@@ -5,8 +5,6 @@ authors = ["Rollie Ma <rollie@rollie.dev>"]
 edition = "2018"
 publish = false
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 anyhow = "1.0.38"
 async-trait = "0.1.42"
@@ -19,16 +17,17 @@ html2md = "0.2.10"
 lazy_static = "1.4.0"
 lettre = "0.10.0-alpha.4"
 log = "0.4.14"
-openssl = { version = "0.10.32", features = ["vendored"] }
+openssl = { version = "0.10.33", features = ["vendored"] }
 prometheus = { version = "0.11.0", features = ["process"] }
-reqwest = { version = "0.11.0", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+reqwest = { version = "0.11.2", default-features = false, features = ["json", "rustls-tls"] }
 rss = "1.10.0"
 serde = "1.0.123"
 serde_derive = "1.0.123"
-serde_json = "1.0.62"
+serde_json = "1.0.64"
 simple_logger = "1.11.0"
-slack-hook = "0.8.0"
 tokio = { version = "1", features = ["full"] }
 toml = "0.5.8"
+url = { version = "2.2.1", features = ["serde"] }
+url_serde = "0.2.0"
 warp = "0.3.0"
 wildmatch = "1.0.13"
