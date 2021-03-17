@@ -1,4 +1,7 @@
-use super::{Alert, Notification, Probe};
+use crate::{
+    alerts::Alert,
+    probes::{Notification, Probe},
+};
 use anyhow::Result;
 use async_trait::async_trait;
 use lazy_static::lazy_static;
@@ -91,6 +94,7 @@ impl Probe for Exec {
                                 String::from_utf8_lossy(&output.stderr)
                             ),
                             message_html: None,
+                            message_entries: None,
                         },
                     )
                     .await?;

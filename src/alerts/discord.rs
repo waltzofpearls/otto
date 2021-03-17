@@ -7,24 +7,24 @@ use serde::Serialize;
 use serde_derive::Deserialize;
 
 #[derive(Debug, Clone, Default, Deserialize)]
-pub struct Slack {
+pub struct Discord {
     namepass: Option<Vec<String>>,
     webhook_url: String,
 }
 
 lazy_static! {
     static ref RUNS_TOTAL: CounterVec = register_counter_vec!(
-        "alert_slack_runs_total",
-        "run counter for slack alert plugin",
+        "alert_discord_runs_total",
+        "run counter for discord alert plugin",
         &["plugin", "webhook_url"]
     )
     .unwrap();
 }
 
 #[async_trait]
-impl Alert for Slack {
+impl Alert for Discord {
     fn new(namepass: Vec<&str>) -> Self {
-        Slack {
+        Discord {
             namepass: Some(namepass.into_iter().map(String::from).collect()),
             ..Default::default()
         }
@@ -36,38 +36,40 @@ impl Alert for Slack {
 
     async fn notify(&self, notif: &Notification) -> Result<()> {
         if !self.should_fire(&notif.name) {
-            log::info!("should not fire slack alert for {}", &notif.name);
+            log::info!("should not fire discord alert for {}", &notif.name);
             return Ok(());
         }
         RUNS_TOTAL
-            .with_label_values(&["alert.slack", "https://hooks.slack.com/services/[redacted]"])
+            .with_label_values(&[
+                "alert.discord",
+                "https://discordapp.com/api/webhooks/[redacted]",
+            ])
             .inc();
 
-        log::info!("sending slack alert to webhook url {}", self.webhook_url);
+        log::info!("sending discord alert to webhook url {}", self.webhook_url);
         log::debug!("NOTIFICATION: {:?}", notif);
 
-        let pretext = format!("*TRIGGERED `{}`:* {}", notif.from, notif.title);
+        let pretext = format!("**TRIGGERED `{}`:** {}", notif.from, notif.title);
         let mut payload = Payload {
             username: "Otto".to_string(),
-            icon_emoji: ":robot_face:".to_string(),
-            text: pretext.clone(),
-            attachments: vec![],
+            content: pretext,
+            embeds: vec![],
         };
         match notif.message_entries.as_ref() {
             Some(message_entries) => {
                 let entries_length = message_entries.len();
                 for (i, entry) in message_entries.iter() {
-                    payload.attachments.push(Attachment {
+                    payload.embeds.push(Embed {
                         title: format!("[{} of {}] {}", i + 1, entries_length, entry.title),
-                        text: entry.description.replace("**", "*"),
-                        color: "#ede542".to_string(),
+                        description: entry.description.chars().take(2048).collect(),
+                        color: 15590722,
                     })
                 }
             }
-            None => payload.attachments.push(Attachment {
+            None => payload.embeds.push(Embed {
                 title: notif.check.clone(),
-                text: notif.message.replace("**", "*"),
-                color: "#ede542".to_string(),
+                description: notif.message.clone(),
+                color: 15590722,
             }),
         }
         let client = reqwest::Client::new();
@@ -75,7 +77,7 @@ impl Alert for Slack {
         match result {
             Ok(_) => Ok(()),
             Err(err) => anyhow::bail!(
-                "failed to post message to slack webhook url {}: {}",
+                "failed to post message to discord webhook url {}: {}",
                 self.webhook_url,
                 err
             ),
@@ -83,19 +85,18 @@ impl Alert for Slack {
     }
 }
 
-// slack webhook payload structs
+// discord webhook payload structs
 
 #[derive(Debug, Serialize)]
 struct Payload {
     username: String,
-    icon_emoji: String,
-    text: String,
-    attachments: Vec<Attachment>,
+    content: String,
+    embeds: Vec<Embed>,
 }
 
 #[derive(Debug, Serialize)]
-struct Attachment {
+struct Embed {
     title: String,
-    text: String,
-    color: String,
+    description: String,
+    color: u32,
 }

@@ -5,12 +5,14 @@ use serde_derive::Deserialize;
 use std::collections::HashMap;
 use wildmatch::WildMatch;
 
+pub mod discord;
 pub mod email;
 pub mod slack;
 pub mod webhook;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Alerts {
+    pub discord: Option<Vec<discord::Discord>>,
     pub slack: Option<Vec<slack::Slack>>,
     pub email: Option<Vec<email::Email>>,
     pub webhook: Option<Vec<webhook::Webhook>>,
@@ -18,6 +20,7 @@ pub struct Alerts {
 
 pub fn register_from(config: &Config) -> HashMap<String, Vec<Box<dyn Alert>>> {
     let mut alerts = HashMap::new();
+    register_plugins!(Alert => config.alerts.discord);
     register_plugins!(Alert => config.alerts.slack);
     register_plugins!(Alert => config.alerts.email);
     register_plugins!(Alert => config.alerts.webhook);

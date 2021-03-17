@@ -1,4 +1,7 @@
-use super::{Alert, Notification, Probe};
+use crate::{
+    alerts::Alert,
+    probes::{Notification, Probe},
+};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use lazy_static::lazy_static;
@@ -107,6 +110,7 @@ impl Probe for HTTP {
                         resp.status().as_u16()
                     ),
                     message_html: None,
+                    message_entries: None,
                 },
             )
             .await?;
