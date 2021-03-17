@@ -1,4 +1,4 @@
-use super::{Alert, Notification};
+use crate::{alerts::Alert, probes::Notification};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use lazy_static::lazy_static;

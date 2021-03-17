@@ -32,16 +32,17 @@ Otto is good at:
 
 Otto is equipped with **Probe** plugins:
 
-- Atom feed
-- RSS feed
-- HTTP
-- Exec (shell scripts)
+- [Atom feed](./src/probes/atom.rs)
+- [RSS feed](./src/probes/rss.rs)
+- [HTTP](./src/probes/http.rs)
+- [Exec](./src/probes/exec.rs) (shell scripts)
 
 **Alert** plugins:
 
-- Slack
-- Email (SMTP)
-- Webhook
+- [Discord](./src/alerts/discord.rs)
+- [Slack](./src/alerts/slack.rs)
+- [Email](./src/alerts/email.rs) (SMTP)
+- [Webhook](./src/alerts/webhook.rs)
 
 And `http://0.0.0.0:9999/metrics` endpoint for promethues.
 

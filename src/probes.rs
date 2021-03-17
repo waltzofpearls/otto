@@ -127,12 +127,19 @@ pub trait Probe: Send + Sync {
 pub struct Notification {
     pub from: String,
     pub name: String,
-    // command that executed or http url opened
+    // command executed, http url opened, atom or rss feed parsed
     pub check: String,
     pub title: String,
     // alert message
     pub message: String,
     pub message_html: Option<String>,
+    pub message_entries: Option<Vec<(i8, MessageEntry)>>,
+}
+
+#[derive(Debug, Default, Serialize)]
+pub struct MessageEntry {
+    pub title: String,
+    pub description: String,
 }
 
 #[cfg(test)]
