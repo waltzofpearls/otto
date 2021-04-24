@@ -1,6 +1,6 @@
 use crate::{
     alerts::Alert,
-    probes::{MessageEntry, Notification, Probe},
+    probes::{MessageEntry, Notification, Probe, HAS_INCIDENT, NO_INCIDENT},
 };
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -9,10 +9,12 @@ use lazy_static::lazy_static;
 use prometheus::{register_counter_vec, register_gauge_vec, CounterVec, GaugeVec};
 use rss::Channel;
 use serde_derive::Deserialize;
+use sled::{Db, IVec};
+use slug::slugify;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default, Deserialize)]
-pub struct RSS {
+pub struct Rss {
     name: Option<String>,
     schedule: Option<String>,
     feed_url: String,
@@ -42,9 +44,9 @@ lazy_static! {
 }
 
 #[async_trait]
-impl Probe for RSS {
+impl Probe for Rss {
     fn new() -> Self {
-        RSS {
+        Self {
             ..Default::default()
         }
     }
@@ -53,12 +55,22 @@ impl Probe for RSS {
         self.schedule.to_owned()
     }
 
-    async fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()> {
+    fn slug(&self) -> String {
+        slugify(format!("rss-{}", self.feed_url))
+    }
+
+    async fn observe(
+        &self,
+        store: &Db,
+        alerts: &HashMap<String, Vec<Box<dyn Alert>>>,
+    ) -> Result<()> {
         log::info!("checking rss feed {}", self.feed_url);
         RUNS_TOTAL
             .with_label_values(&["probe.rss", &self.feed_url])
             .inc();
 
+        let stored = store.get(self.slug().as_bytes())?;
+        let mut to_store = NO_INCIDENT;
         let mut triggered = 0;
         let content = reqwest::get(&self.feed_url).await?.bytes().await?;
         let feed = Channel::read_from(&content[..])?;
@@ -107,31 +119,37 @@ impl Probe for RSS {
         }
 
         if found_incidents > 0 {
-            log::warn!(
+            log::info!(
                 "_TRIGGERED_: found incident from RSS feed {}",
                 self.feed_url
             );
-            self.notify(
-                alerts,
-                Notification {
-                    from: "rss".to_owned(),
-                    name: self.name("rss", self.name.to_owned()),
-                    check: format!("Incidents from RSS feed {}", self.feed_url),
-                    title: format!(
-                        "Found {} incident(s) from {}",
-                        found_incidents, self.feed_url
-                    ),
-                    message: messages.join("\n\n------------------------------\n\n"),
-                    message_html: Some(messages_html.join("<br><br><hr><br><br>")),
-                    message_entries: Some(message_entries),
-                },
-            )
-            .await?;
+            if stored.is_none() || stored == Some(IVec::from(NO_INCIDENT)) {
+                log::warn!("_NOTIFY_: found incident from RSS feed {}", self.feed_url);
+                self.notify(
+                    alerts,
+                    Notification {
+                        from: "rss".to_owned(),
+                        name: self.name("rss", self.name.to_owned()),
+                        check: format!("Incidents from RSS feed {}", self.feed_url),
+                        title: format!(
+                            "Found {} incident(s) from {}",
+                            found_incidents, self.feed_url
+                        ),
+                        message: messages.join("\n\n------------------------------\n\n"),
+                        message_html: Some(messages_html.join("<br><br><hr><br><br>")),
+                        message_entries: Some(message_entries),
+                    },
+                )
+                .await?;
+            }
             TRIGGERED_TOTAL
                 .with_label_values(&["probe.rss", &self.feed_url])
                 .inc();
             triggered = 1;
+            to_store = HAS_INCIDENT;
         }
+
+        store.insert(self.slug().as_bytes(), to_store)?;
 
         TRIGGERED
             .with_label_values(&["probe.rss", &self.feed_url])

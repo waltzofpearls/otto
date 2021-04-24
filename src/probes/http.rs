@@ -1,16 +1,18 @@
 use crate::{
     alerts::Alert,
-    probes::{Notification, Probe},
+    probes::{Notification, Probe, HAS_INCIDENT, NO_INCIDENT},
 };
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 use prometheus::{register_counter_vec, register_gauge_vec, CounterVec, GaugeVec};
 use serde_derive::Deserialize;
+use sled::{Db, IVec};
+use slug::slugify;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default, Deserialize)]
-pub struct HTTP {
+pub struct Http {
     name: Option<String>,
     schedule: Option<String>,
     url: String,
@@ -42,9 +44,9 @@ lazy_static! {
 }
 
 #[async_trait]
-impl Probe for HTTP {
+impl Probe for Http {
     fn new() -> Self {
-        HTTP {
+        Self {
             ..Default::default()
         }
     }
@@ -53,7 +55,18 @@ impl Probe for HTTP {
         self.schedule.to_owned()
     }
 
-    async fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()> {
+    fn slug(&self) -> String {
+        slugify(format!(
+            "http-{}-{}-{}",
+            self.url, self.method, self.expected_code
+        ))
+    }
+
+    async fn observe(
+        &self,
+        store: &Db,
+        alerts: &HashMap<String, Vec<Box<dyn Alert>>>,
+    ) -> Result<()> {
         log::info!(
             "sending [{}] request to {} with expected status code {}",
             self.method,
@@ -64,6 +77,8 @@ impl Probe for HTTP {
             .with_label_values(&["probe.http", &self.url, &self.method])
             .inc();
 
+        let stored = store.get(self.slug().as_bytes())?;
+        let mut to_store = NO_INCIDENT;
         let mut triggered = 0;
         let client = reqwest::Client::new();
         let mut req = match &self.method as &str {
@@ -77,48 +92,84 @@ impl Probe for HTTP {
         if let Some(json) = self.json.to_owned() {
             req = req.json(&json)
         }
-        let resp = req
-            .send()
-            .await
-            .with_context(|| format!("failed to {} request {}", self.method, self.url))?;
-        if resp.status().as_u16() != self.expected_code {
-            log::warn!(
-                "_TRIGGERED_: failed [{}] requesting url {} with expected code {}",
-                self.method,
-                self.url,
-                self.expected_code,
-            );
-            self.notify(
-                alerts,
-                Notification {
-                    from: "http".to_owned(),
-                    name: self.name("http", self.name.to_owned()),
-                    check: format!(
-                        "http {} request to url {} with expected status code {}",
-                        self.method, self.url, self.expected_code
-                    ),
-                    title: format!(
+        let resp = req.send().await;
+        let mut title: String = "".to_owned();
+        let mut message: String = "".to_owned();
+        let mut found_incident = false;
+        match resp {
+            Ok(resp) => {
+                if resp.status().as_u16() != self.expected_code {
+                    found_incident = true;
+                    title = format!(
                         "{} {} want {} got {}",
                         self.method,
                         self.url,
                         self.expected_code,
                         resp.status().as_u16()
-                    ),
-                    message: format!(
+                    );
+                    message = format!(
                         "expected status code is {} and actual code is {}",
                         self.expected_code,
                         resp.status().as_u16()
-                    ),
-                    message_html: None,
-                    message_entries: None,
-                },
-            )
-            .await?;
+                    );
+                }
+            }
+            Err(err) => {
+                found_incident = true;
+                if err.is_connect() || err.is_request() || err.is_redirect() || err.is_timeout() {
+                    title = format!(
+                        "{} {} want {} got error {}",
+                        self.method, self.url, self.expected_code, err
+                    );
+                    message = format!(
+                        "expected status code is {} and got error {}",
+                        self.expected_code, err
+                    );
+                } else {
+                    anyhow::bail!("failed to {} request {}: {}", self.method, self.url, err);
+                }
+            }
+        }
+        if found_incident {
+            log::info!(
+                "_TRIGGERED_: {} {} with expected code {}",
+                self.method,
+                self.url,
+                self.expected_code,
+            );
+            if stored.is_none() || stored == Some(IVec::from(NO_INCIDENT)) {
+                log::warn!(
+                    "_NOTIFY_: {} {} with expected code {}",
+                    self.method,
+                    self.url,
+                    self.expected_code
+                );
+                self.notify(
+                    alerts,
+                    Notification {
+                        from: "http".to_owned(),
+                        name: self.name("http", self.name.to_owned()),
+                        check: format!(
+                            "http {} request to url {} with expected status code {}",
+                            self.method, self.url, self.expected_code
+                        ),
+                        title,
+                        message,
+                        message_html: None,
+                        message_entries: None,
+                    },
+                )
+                .await?;
+            }
             TRIGGERED_TOTAL
                 .with_label_values(&["probe.http", &self.url, &self.method])
                 .inc();
             triggered = 1;
+            to_store = HAS_INCIDENT;
         }
+
+        store.insert(self.slug().as_bytes(), to_store)?;
+
         TRIGGERED
             .with_label_values(&["probe.http", &self.url, &self.method])
             .set(triggered as f64);

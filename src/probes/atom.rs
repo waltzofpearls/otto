@@ -1,6 +1,6 @@
 use crate::{
     alerts::Alert,
-    probes::{MessageEntry, Notification, Probe},
+    probes::{MessageEntry, Notification, Probe, HAS_INCIDENT, NO_INCIDENT},
 };
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -9,6 +9,8 @@ use fancy_regex::Regex;
 use lazy_static::lazy_static;
 use prometheus::{register_counter_vec, register_gauge_vec, CounterVec, GaugeVec};
 use serde_derive::Deserialize;
+use sled::{Db, IVec};
+use slug::slugify;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -44,7 +46,7 @@ lazy_static! {
 #[async_trait]
 impl Probe for Atom {
     fn new() -> Self {
-        Atom {
+        Self {
             ..Default::default()
         }
     }
@@ -53,12 +55,22 @@ impl Probe for Atom {
         self.schedule.to_owned()
     }
 
-    async fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()> {
+    fn slug(&self) -> String {
+        slugify(format!("atom-{}", self.feed_url))
+    }
+
+    async fn observe(
+        &self,
+        store: &Db,
+        alerts: &HashMap<String, Vec<Box<dyn Alert>>>,
+    ) -> Result<()> {
         log::info!("checking atom feed {}", self.feed_url);
         RUNS_TOTAL
             .with_label_values(&["probe.atom", &self.feed_url])
             .inc();
 
+        let stored = store.get(self.slug().as_bytes())?;
+        let mut to_store = NO_INCIDENT;
         let mut triggered = 0;
         let content = reqwest::get(&self.feed_url).await?.bytes().await?;
         let feed = Feed::read_from(&content[..])?;
@@ -109,31 +121,37 @@ impl Probe for Atom {
         }
 
         if found_incidents > 0 {
-            log::warn!(
+            log::info!(
                 "_TRIGGERED_: found incident from Atom feed {}",
                 self.feed_url
             );
-            self.notify(
-                alerts,
-                Notification {
-                    from: "atom".to_owned(),
-                    name: self.name("atom", self.name.to_owned()),
-                    check: format!("Incidents from Atom feed {}", self.feed_url),
-                    title: format!(
-                        "Found {} incident(s) from {}",
-                        found_incidents, self.feed_url
-                    ),
-                    message: messages.join("\n\n------------------------------\n\n"),
-                    message_html: Some(messages_html.join("<br><br><hr><br><br>")),
-                    message_entries: Some(message_entries),
-                },
-            )
-            .await?;
+            if stored.is_none() || stored == Some(IVec::from(NO_INCIDENT)) {
+                log::warn!("_NOTIFY_: found incident from Atom feed {}", self.feed_url);
+                self.notify(
+                    alerts,
+                    Notification {
+                        from: "atom".to_owned(),
+                        name: self.name("atom", self.name.to_owned()),
+                        check: format!("Incidents from Atom feed {}", self.feed_url),
+                        title: format!(
+                            "Found {} incident(s) from {}",
+                            found_incidents, self.feed_url
+                        ),
+                        message: messages.join("\n\n------------------------------\n\n"),
+                        message_html: Some(messages_html.join("<br><br><hr><br><br>")),
+                        message_entries: Some(message_entries),
+                    },
+                )
+                .await?;
+            }
             TRIGGERED_TOTAL
                 .with_label_values(&["probe.atom", &self.feed_url])
                 .inc();
             triggered = 1;
+            to_store = HAS_INCIDENT;
         }
+
+        store.insert(self.slug().as_bytes(), to_store)?;
 
         TRIGGERED
             .with_label_values(&["probe.atom", &self.feed_url])

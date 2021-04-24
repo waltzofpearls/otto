@@ -47,24 +47,29 @@ async fn main() -> Result<()> {
             .with_context(|| format!("could not read file `{}`", config_file))?;
         let config: Config = toml::from_str(&buffer)
             .with_context(|| format!("could not parse toml config file `{}`", config_file))?;
+        let default_path = String::from("/tmp/otto");
+        let path_to_store = config.path_to_store.as_ref().unwrap_or(&default_path);
+        let store = sled::open(path_to_store)?;
 
         web::start(&config, stop_tx.clone())?;
 
         let probes = probes::register_from(&config);
         let alerts = alerts::register_from(&config);
 
-        probes::start(&config, probes, alerts, stop_tx.clone())?;
+        probes::start(&config, store.clone(), probes, alerts, stop_tx.clone())?;
 
         tokio::select! {
             _ = hangup.recv() => {
                 log::info!("SIGHUP received, reloading...");
                 stop_tx.send(true)?;
+                store.flush()?;
                 sleep(Duration::from_secs(1)).await;
                 continue;
             }
             _ = ctrl_c() => {
                 log::info!("SIGINT received, stopping...");
                 stop_tx.send(true)?;
+                store.flush()?;
                 sleep(Duration::from_secs(1)).await;
                 break;
             }
