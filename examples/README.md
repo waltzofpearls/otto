@@ -19,6 +19,8 @@ A complete config file is consisted of global configs, probe plugins and alert p
 
 ```toml
 schedule = "0 * * * * *"
+# optional config, default /tmp/otto
+path_to_store = "/tmp/otto"
 
 [prometheus]
 # Have prometheus metrics exposed at http://0.0.0.0:9999/metrics
