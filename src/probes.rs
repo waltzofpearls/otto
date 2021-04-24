@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use chrono::Utc;
 use cron::Schedule;
 use serde_derive::{Deserialize, Serialize};
+use sled::Db;
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tokio::{sync::broadcast, time::sleep};
 
@@ -16,8 +17,8 @@ pub mod rss;
 pub struct Probes {
     pub atom: Option<Vec<atom::Atom>>,
     pub exec: Option<Vec<exec::Exec>>,
-    pub http: Option<Vec<http::HTTP>>,
-    pub rss: Option<Vec<rss::RSS>>,
+    pub http: Option<Vec<http::Http>>,
+    pub rss: Option<Vec<rss::Rss>>,
 }
 
 pub fn register_from(config: &Config) -> HashMap<String, Vec<Box<dyn Probe>>> {
@@ -31,11 +32,13 @@ pub fn register_from(config: &Config) -> HashMap<String, Vec<Box<dyn Probe>>> {
 
 pub fn start(
     config: &Config,
+    store: Db,
     probes: HashMap<String, Vec<Box<dyn Probe>>>,
     alerts: HashMap<String, Vec<Box<dyn Alert>>>,
     stop_tx: broadcast::Sender<bool>,
 ) -> Result<()> {
     // to be shared by concurrent tokio tasks
+    let store = Arc::new(store);
     let alerts = Arc::new(alerts);
     let global = config.schedule.clone();
 
@@ -44,9 +47,11 @@ pub fn start(
         for plugin in plugins.into_iter() {
             let schedule = Schedule::from_str(&plugin.schedule(&global))?;
             let name = name.clone();
+            let cloned_store = Arc::clone(&store);
             let cloned_alerts = Arc::clone(&alerts);
             let mut stop_rx = stop_tx.subscribe();
             tokio::spawn(async move {
+                let local_store = cloned_store;
                 let local_alerts = cloned_alerts;
                 for datetime in schedule.upcoming(Utc) {
                     let now = Utc::now();
@@ -54,7 +59,7 @@ pub fn start(
                         tokio::select! {
                             _ = sleep(duration) => {
                                 plugin
-                                    .observe(local_alerts.as_ref())
+                                    .observe(local_store.as_ref(), local_alerts.as_ref())
                                     .await
                                     .unwrap_or_else(|err| {
                                         log::error!("[probe][{}] error running plugin: {}", name, err);
@@ -79,8 +84,16 @@ pub trait Probe: Send + Sync {
     fn new() -> Self
     where
         Self: Sized;
+
     fn local_schedule(&self) -> Option<String>;
-    async fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()>;
+
+    fn slug(&self) -> String;
+
+    async fn observe(
+        &self,
+        store: &sled::Db,
+        alerts: &HashMap<String, Vec<Box<dyn Alert>>>,
+    ) -> Result<()>;
 
     fn schedule(&self, global: &str) -> String {
         match self.local_schedule() {
@@ -142,6 +155,9 @@ pub struct MessageEntry {
     pub description: String,
 }
 
+const HAS_INCIDENT: &[u8] = &[1, 1, 1];
+const NO_INCIDENT: &[u8] = &[0, 0, 0];
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -158,8 +174,7 @@ mod test {
     async fn test_probe_notify<T: Probe>() {
         let plugin: T = T::new();
         let mock_alert = MockAlert::new(vec![""]);
-        let mut alerts_vec: Vec<Box<dyn Alert>> = Vec::new();
-        alerts_vec.push(Box::new(mock_alert));
+        let alerts_vec: Vec<Box<dyn Alert>> = vec![Box::new(mock_alert)];
         let mut alerts_map = HashMap::new();
         alerts_map.insert(String::from("mock_alert"), alerts_vec);
         let result = plugin
@@ -191,6 +206,6 @@ mod test {
 
     test_probe!(test_atom_notify, atom::Atom);
     test_probe!(test_exec_notify, exec::Exec);
-    test_probe!(test_http_notify, http::HTTP);
-    test_probe!(test_rss_notify, self::rss::RSS);
+    test_probe!(test_http_notify, http::Http);
+    test_probe!(test_rss_notify, self::rss::Rss);
 }

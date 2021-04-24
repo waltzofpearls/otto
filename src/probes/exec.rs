@@ -1,12 +1,14 @@
 use crate::{
     alerts::Alert,
-    probes::{Notification, Probe},
+    probes::{Notification, Probe, HAS_INCIDENT, NO_INCIDENT},
 };
 use anyhow::Result;
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 use prometheus::{register_counter_vec, register_gauge_vec, CounterVec, GaugeVec};
 use serde_derive::Deserialize;
+use sled::{Db, IVec};
+use slug::slugify;
 use std::{collections::HashMap, process::Command};
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -41,7 +43,7 @@ lazy_static! {
 #[async_trait]
 impl Probe for Exec {
     fn new() -> Self {
-        Exec {
+        Self {
             ..Default::default()
         }
     }
@@ -50,12 +52,26 @@ impl Probe for Exec {
         self.schedule.to_owned()
     }
 
-    async fn observe(&self, alerts: &HashMap<String, Vec<Box<dyn Alert>>>) -> Result<()> {
+    fn slug(&self) -> String {
+        slugify(format!(
+            "exec-{}-{}",
+            self.cmd,
+            self.args.to_owned().unwrap_or_default().join("-")
+        ))
+    }
+
+    async fn observe(
+        &self,
+        store: &Db,
+        alerts: &HashMap<String, Vec<Box<dyn Alert>>>,
+    ) -> Result<()> {
         log::info!("executing command {:?} with args {:?}", self.cmd, self.args);
         RUNS_TOTAL
             .with_label_values(&["probe.exec", &self.cmd])
             .inc();
 
+        let stored = store.get(self.slug().as_bytes())?;
+        let mut to_store = NO_INCIDENT;
         let mut triggered = 0;
         let mut cmd = Command::new(&self.cmd);
         if let Some(args) = &self.args {
@@ -72,39 +88,54 @@ impl Probe for Exec {
             }
             Ok(output) => {
                 if !output.status.success() {
-                    log::warn!(
+                    log::info!(
                         "_TRIGGERED_: command {} with args {:?} got code {}",
                         self.cmd,
                         self.args,
                         output.status,
                     );
-                    self.notify(
-                        alerts,
-                        Notification {
-                            from: "exec".to_owned(),
-                            name: self.name("exec", self.name.to_owned()),
-                            check: format!("command `{}` with args `{:?}`", self.cmd, self.args),
-                            title: format!(
-                                "`{}` `{:?}` got code {}",
-                                self.cmd, self.args, output.status
-                            ),
-                            message: format!(
-                                "{}: {}",
-                                output.status,
-                                String::from_utf8_lossy(&output.stderr)
-                            ),
-                            message_html: None,
-                            message_entries: None,
-                        },
-                    )
-                    .await?;
+                    if stored.is_none() || stored == Some(IVec::from(NO_INCIDENT)) {
+                        log::warn!(
+                            "_NOTIFY_: command {} with args {:?} got code {}",
+                            self.cmd,
+                            self.args,
+                            output.status,
+                        );
+                        self.notify(
+                            alerts,
+                            Notification {
+                                from: "exec".to_owned(),
+                                name: self.name("exec", self.name.to_owned()),
+                                check: format!(
+                                    "command `{}` with args `{:?}`",
+                                    self.cmd, self.args
+                                ),
+                                title: format!(
+                                    "`{}` `{:?}` got code {}",
+                                    self.cmd, self.args, output.status
+                                ),
+                                message: format!(
+                                    "{}: {}",
+                                    output.status,
+                                    String::from_utf8_lossy(&output.stderr)
+                                ),
+                                message_html: None,
+                                message_entries: None,
+                            },
+                        )
+                        .await?;
+                    }
                     TRIGGERED_TOTAL
                         .with_label_values(&["probe.exec", &self.cmd])
                         .inc();
                     triggered = 1;
+                    to_store = HAS_INCIDENT;
                 }
             }
         };
+
+        store.insert(self.slug().as_bytes(), to_store)?;
+
         TRIGGERED
             .with_label_values(&["probe.exec", &self.cmd])
             .set(triggered as f64);

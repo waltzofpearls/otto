@@ -5,6 +5,7 @@ use serde_derive::Deserialize;
 pub struct Config {
     pub schedule: String,
     pub prometheus: Option<Prometheus>,
+    pub path_to_store: Option<String>,
     pub probes: Option<Probes>,
     pub alerts: Option<Alerts>,
 }
